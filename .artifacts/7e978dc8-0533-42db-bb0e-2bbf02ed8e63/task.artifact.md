@@ -1,0 +1,5 @@
+- [x] Optimize `BuyerProvider` internal caching and pagination getters.
+- [x] Refactor `DailyWorkAreaView` to use `CustomScrollView` and `Slivers` for lazy loading.
+- [x] Refactor `DashboardView` "All Importers" view to use `CustomScrollView` and `Slivers`.
+- [x] Implement scroll-to-bottom "Load More" logic in both views.
+- [x] Verify responsiveness when switching tabs and scrolling.

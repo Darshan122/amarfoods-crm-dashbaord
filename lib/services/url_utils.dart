@@ -70,8 +70,14 @@ class UrlUtils {
     required bool isFirstEmail,
     int followupCount = 0,
   }) async {
-    final cleanEmail = email.split(',').first.trim();
-    if (cleanEmail.isEmpty) return;
+    final List<String> allEmails = email
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (allEmails.isEmpty) return;
+
+    final String recipientList = allEmails.join(';');
 
     final String company = companyName.isNotEmpty ? companyName : 'Importer';
 
@@ -104,19 +110,19 @@ Amar Foods Export Division''';
 
     // 1. Official Microsoft 365 Outlook Webmail Deeplink Compose URL (Works for amar@amarfoods.in / cloud.microsoft)
     final String outlookOfficeUrl =
-        'https://outlook.office.com/mail/deeplink/compose?to=${Uri.encodeComponent(cleanEmail)}&subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}';
+        'https://outlook.office.com/mail/deeplink/compose?to=${Uri.encodeComponent(recipientList)}&subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}';
 
     // 2. Office 365 Secondary Deeplink Compose URL
     final String office365Url =
-        'https://outlook.office365.com/mail/deeplink/compose?to=${Uri.encodeComponent(cleanEmail)}&subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}';
+        'https://outlook.office365.com/mail/deeplink/compose?to=${Uri.encodeComponent(recipientList)}&subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}';
 
     // 3. Outlook Personal Live Webmail fallback
     final String outlookLiveUrl =
-        'https://outlook.live.com/mail/0/deeplink/compose?to=${Uri.encodeComponent(cleanEmail)}&subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}';
+        'https://outlook.live.com/mail/0/deeplink/compose?to=${Uri.encodeComponent(recipientList)}&subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}';
 
     // 4. Gmail Web Compose fallback
     final String gmailUrl =
-        'https://mail.google.com/mail/?view=cm&fs=1&to=${Uri.encodeComponent(cleanEmail)}&su=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}';
+        'https://mail.google.com/mail/?view=cm&fs=1&to=${Uri.encodeComponent(recipientList)}&su=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}';
 
     try {
       // Primary: outlook.office.com (Official Microsoft 365 Webmail Deeplink)
@@ -135,7 +141,7 @@ Amar Foods Export Division''';
           } catch (e4) {
             final Uri mailtoUri = Uri(
               scheme: 'mailto',
-              path: cleanEmail,
+              path: recipientList,
               queryParameters: {
                 'subject': subject,
                 'body': body,

@@ -6,7 +6,7 @@ import '../models/buyer.dart';
 
 class ApiService {
   static const String defaultScriptUrl =
-      'https://script.google.com/macros/s/AKfycbwyiqEkHPXvyw4JPKCjb_bDN7Glypw9ixcDIVPKqWnDXA-mWdP6opBjT6SYSZrlEtOK/exec';
+      'https://script.google.com/macros/s/AKfycbzzOGOapsNx8P3IAhiMwNW6uUWSLFa07JXBbxcgBGvlbgRx-ZP2u9J99VvNPERjhWns/exec';
 
   static const String sheetGvizCsvUrl =
       'https://docs.google.com/spreadsheets/d/1jtqUJxkvQoyxTccC1gOUv1WejJigm7DMX9P66OyrhuA/gviz/tq?tqx=out:csv&sheet=Sheet1';

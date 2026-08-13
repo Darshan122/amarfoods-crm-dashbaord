@@ -179,6 +179,8 @@ class BuyerProvider extends ChangeNotifier {
     _firstEmailCache = [];
     _allFollowupQueueCache = [];
 
+    int counter = 1;
+
     for (var b in _buyers) {
       bool matchesSearch = query.isEmpty ||
           b.company.toLowerCase().contains(query) ||
@@ -194,7 +196,8 @@ class BuyerProvider extends ChangeNotifier {
         if (b.clientReply != _replyFilter) continue;
       }
 
-      _filteredCache.add(b);
+      final buyer = b.copyWith(srNo: counter++);
+      _filteredCache.add(buyer);
 
       // Category logic for Daily Work Area
       bool isConverted = b.clientReply.toLowerCase() == 'yes' || b.clientReply.toLowerCase() == 'hold';
@@ -202,21 +205,21 @@ class BuyerProvider extends ChangeNotifier {
       if (!isConverted) {
         // 1. Overdue
         if (b.nextDueDate.isNotEmpty && b.nextDueDate.compareTo(todayStr) < 0) {
-          _overdueCache.add(b);
+          _overdueCache.add(buyer);
         }
         // 2. Follow-ups Today
         if (b.isDueToday() && b.followupCount > 0 && (b.nextDueDate.isEmpty || b.nextDueDate.compareTo(todayStr) <= 0)) {
-           _followupTodayCache.add(b);
+           _followupTodayCache.add(buyer);
         }
         // 3. First Emails (Any buyer with 0 follow-ups or no first email date yet)
         if (b.followupCount == 0 || b.firstEmailDate.isEmpty || b.status == 'New' || b.status == 'First Email Pending' || b.status == 'Contacted') {
-          _firstEmailCache.add(b);
+          _firstEmailCache.add(buyer);
         }
       }
 
       // 4. All Follow-up Queue
       if (b.followupCount > 0 || b.status.contains('Follow-Up')) {
-        _allFollowupQueueCache.add(b);
+        _allFollowupQueueCache.add(buyer);
       }
     }
 

@@ -475,9 +475,10 @@ class _BuyerDialogState extends State<BuyerDialog> {
         .where((e) => e.isNotEmpty)
         .join(', ');
 
+    final srNoVal = widget.buyer?.srNo ?? widget.nextSrNo;
     final newBuyer = Buyer(
-      id: widget.buyer?.id ?? Buyer.formatBuyerId(DateTime.now().millisecondsSinceEpoch % 99999),
-      srNo: widget.buyer?.srNo ?? widget.nextSrNo,
+      id: widget.buyer?.id ?? Buyer.formatBuyerId(srNoVal),
+      srNo: srNoVal,
       company: companyName,
       website: _websiteCtrl.text.trim(),
       email: emailStr,

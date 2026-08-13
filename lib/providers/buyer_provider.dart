@@ -515,8 +515,14 @@ class BuyerProvider extends ChangeNotifier {
     }
 
     bool isEditing = index >= 0;
+    Buyer targetBuyer = buyer;
+
     if (isEditing) {
-      _buyers[index] = buyer;
+      targetBuyer = buyer.copyWith(
+        id: _buyers[index].id,
+        srNo: _buyers[index].srNo,
+      );
+      _buyers[index] = targetBuyer;
       _rebuildCaches(preservePage: true);
     } else {
       int maxSrNo = 0;
@@ -524,11 +530,11 @@ class BuyerProvider extends ChangeNotifier {
         if (b.srNo > maxSrNo) maxSrNo = b.srNo;
       }
       final nextSrNo = maxSrNo + 1;
-      final newBuyer = buyer.copyWith(
+      targetBuyer = buyer.copyWith(
         id: Buyer.formatBuyerId(nextSrNo),
         srNo: nextSrNo,
       );
-      _buyers.add(newBuyer);
+      _buyers.add(targetBuyer);
       _rebuildCaches(preservePage: false);
       _currentPage = totalPages;
       _firstEmailDisplayedCount = _firstEmailCache.length;
@@ -536,7 +542,7 @@ class BuyerProvider extends ChangeNotifier {
     await _saveLocalBuyers();
     notifyListeners();
 
-    bool res = await _apiService.saveBuyer(buyer);
+    bool res = await _apiService.saveBuyer(targetBuyer);
     return res;
   }
 

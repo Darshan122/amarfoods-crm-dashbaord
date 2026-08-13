@@ -168,10 +168,22 @@ class ApiService {
       String website = cleanWebsiteUrl(rawWebsite);
       String email = cleanEmailStr(rawEmail);
 
-      if (company.isEmpty && email.isEmpty && website.isEmpty) continue;
-      if (company == 'N/A' || company.isEmpty) {
-        if (website.isNotEmpty && website != 'N/A') {
+      final cleanComp = company.trim().toLowerCase();
+      final cleanEmail = email.trim().toLowerCase();
+      final cleanWeb = website.trim().toLowerCase();
+
+      bool isCompEmpty = cleanComp.isEmpty || cleanComp == 'n/a' || cleanComp == '-';
+      bool isEmailEmpty = cleanEmail.isEmpty || cleanEmail == 'n/a' || cleanEmail == '-';
+      bool isWebEmpty = cleanWeb.isEmpty || cleanWeb == 'n/a' || cleanWeb == '-';
+
+      // Skip any completely blank or non-actionable rows
+      if (isCompEmpty && isEmailEmpty && isWebEmpty) continue;
+
+      if (isCompEmpty) {
+        if (!isWebEmpty) {
           company = website.replaceAll('https://', '').replaceAll('http://', '').replaceAll('www.', '').split('/')[0];
+        } else if (!isEmailEmpty) {
+          company = email.split('@')[0];
         } else {
           company = 'Importer #$counter';
         }

@@ -79,7 +79,7 @@ class BuyerProvider extends ChangeNotifier {
     loadBuyers(forceRefresh: true);
   }
 
-  static const String _localBuyersKey = 'amar_crm_local_buyers_v4';
+  static const String _localBuyersKey = 'amar_crm_local_buyers_v5';
 
   Future<void> _saveLocalBuyers() async {
     try {

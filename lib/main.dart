@@ -1,7 +1,18 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'providers/buyer_provider.dart';
 import 'views/dashboard_view.dart';
+
+class AppScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
+}
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +50,7 @@ class _BuyerCRMAppState extends State<BuyerCRMApp> {
         return MaterialApp(
           title: 'Amar Foods - Buyer Follow-up CRM',
           debugShowCheckedModeBanner: false,
+          scrollBehavior: AppScrollBehavior(),
           theme: ThemeData.light().copyWith(
             scaffoldBackgroundColor: const Color(0xFFF4F5F8),
             colorScheme: const ColorScheme.light(

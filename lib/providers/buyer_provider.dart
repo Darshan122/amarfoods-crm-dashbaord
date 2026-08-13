@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/buyer.dart';
 import '../services/api_service.dart';
 
-enum MainTab { dailyWorkArea, allImporters, analytics }
+enum MainTab { dailyWorkArea, allImporters, analytics, emailTemplates }
 
 class BuyerProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -76,13 +79,86 @@ class BuyerProvider extends ChangeNotifier {
     loadBuyers(forceRefresh: true);
   }
 
+  static const String _localBuyersKey = 'amar_crm_local_buyers_v4';
+
+  Future<void> _saveLocalBuyers() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String jsonStr = jsonEncode(_buyers.map((b) => b.toJson()).toList());
+      await prefs.setString(_localBuyersKey, jsonStr);
+    } catch (e) {
+      debugPrint('BuyerProvider: Error saving local buyers: $e');
+    }
+  }
+
+  Future<List<Buyer>> _loadLocalBuyers() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? jsonStr = prefs.getString(_localBuyersKey);
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(jsonStr);
+        return decoded.map((e) => Buyer.fromJson(e)).toList();
+      }
+    } catch (e) {
+      debugPrint('BuyerProvider: Error loading local buyers: $e');
+    }
+    return [];
+  }
+
   Future<void> loadBuyers({bool forceRefresh = false}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _buyers = await _apiService.fetchBuyers(forceRefresh: forceRefresh);
+      final remote = await _apiService.fetchBuyers(forceRefresh: forceRefresh);
+      final local = await _loadLocalBuyers();
+
+      if (remote.isEmpty) {
+        _buyers = local;
+      } else if (local.isEmpty) {
+        _buyers = remote;
+      } else {
+        // Smart Merge: Preserve all local user updates (emails, follow-up counts, replies, dates, statuses)
+        final Map<String, Buyer> mapByCompany = {};
+
+        for (var b in remote) {
+          String key = b.company.trim().toLowerCase();
+          if (key.isNotEmpty) {
+            mapByCompany[key] = b;
+          }
+        }
+
+        for (var b in local) {
+          String key = b.company.trim().toLowerCase();
+          if (key.isNotEmpty && mapByCompany.containsKey(key)) {
+            final remoteB = mapByCompany[key]!;
+            mapByCompany[key] = remoteB.copyWith(
+              id: b.id.isNotEmpty ? b.id : remoteB.id,
+              company: b.company.isNotEmpty ? b.company : remoteB.company,
+              website: (b.website.isNotEmpty && b.website != 'N/A') ? b.website : remoteB.website,
+              email: b.email.isNotEmpty ? b.email : remoteB.email,
+              phone: b.phone.isNotEmpty ? b.phone : remoteB.phone,
+              connectionMethod: b.connectionMethod.isNotEmpty ? b.connectionMethod : remoteB.connectionMethod,
+              connectionDate: b.connectionDate.isNotEmpty ? b.connectionDate : remoteB.connectionDate,
+              firstEmailDate: b.firstEmailDate.isNotEmpty ? b.firstEmailDate : remoteB.firstEmailDate,
+              nextDueDate: b.nextDueDate.isNotEmpty ? b.nextDueDate : remoteB.nextDueDate,
+              clientReply: b.clientReply != 'Pending' ? b.clientReply : remoteB.clientReply,
+              lastEmailDate: b.lastEmailDate.isNotEmpty ? b.lastEmailDate : remoteB.lastEmailDate,
+              followupCount: b.followupCount > remoteB.followupCount ? b.followupCount : remoteB.followupCount,
+              status: b.status != 'New' ? b.status : remoteB.status,
+              nextAction: b.nextAction.isNotEmpty ? b.nextAction : remoteB.nextAction,
+              notes: b.notes.isNotEmpty ? b.notes : remoteB.notes,
+            );
+          } else if (key.isNotEmpty) {
+            mapByCompany[key] = b;
+          }
+        }
+
+        _buyers = mapByCompany.values.toList();
+      }
+
+      await _saveLocalBuyers();
       _rebuildCaches();
     } catch (e) {
       _errorMessage = e.toString();
@@ -92,7 +168,8 @@ class BuyerProvider extends ChangeNotifier {
     }
   }
 
-  void _rebuildCaches() {
+  void _rebuildCaches({bool preservePage = false}) {
+    int savedPage = _currentPage;
     final query = _searchQuery.trim().toLowerCase();
     final todayStr = DateTime.now().toIso8601String().split('T')[0];
     
@@ -134,8 +211,8 @@ class BuyerProvider extends ChangeNotifier {
         if (b.isDueToday() && b.followupCount > 0 && (b.nextDueDate.isEmpty || b.nextDueDate.compareTo(todayStr) <= 0)) {
            _followupTodayCache.add(buyer);
         }
-        // 3. First Emails
-        if (b.firstEmailDate.isEmpty || b.status == 'New' || b.status == 'First Email Pending') {
+        // 3. First Emails (Any buyer with 0 follow-ups or no first email date yet)
+        if (b.followupCount == 0 || b.firstEmailDate.isEmpty || b.status == 'New' || b.status == 'First Email Pending' || b.status == 'Contacted') {
           _firstEmailCache.add(buyer);
         }
       }
@@ -152,11 +229,16 @@ class BuyerProvider extends ChangeNotifier {
     _firstEmailDisplayedCount = pageSize;
     _allFollowupQueueDisplayedCount = pageSize;
     _filteredDisplayedCount = pageSize;
-    _currentPage = 1;
+
+    if (preservePage && totalPages > 0) {
+      _currentPage = savedPage.clamp(1, totalPages);
+    } else {
+      _currentPage = 1;
+    }
   }
 
   // ── Page-based Pagination for All Importers Table ──
-  int _rowsPerPage = 50; // Default 50 as requested
+  int _rowsPerPage = 25; // Default 25 for fast 60fps scrolling
   int _currentPage = 1;
 
   int get rowsPerPage => _rowsPerPage;
@@ -377,6 +459,32 @@ class BuyerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> markEmailSent(String buyerId) async {
+    final index = _buyers.indexWhere((b) => b.id == buyerId);
+    if (index < 0) return false;
+
+    final existing = _buyers[index];
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final nextDueStr = Buyer.calculateNextDueDate(DateTime.now());
+
+    final updatedCount = existing.followupCount + 1;
+    final updated = existing.copyWith(
+      firstEmailDate: existing.firstEmailDate.isEmpty ? todayStr : existing.firstEmailDate,
+      lastEmailDate: todayStr,
+      nextDueDate: nextDueStr,
+      followupCount: updatedCount,
+      status: 'Follow-Up $updatedCount Sent',
+    );
+
+    _buyers[index] = updated;
+    _rebuildCaches(preservePage: true);
+    await _saveLocalBuyers();
+    notifyListeners();
+
+    await _apiService.saveBuyer(updated);
+    return true;
+  }
+
   Future<bool> batchProcessSelected({bool sendGmail = false}) async {
     if (_selectedBuyerIds.isEmpty) return false;
 
@@ -401,19 +509,37 @@ class BuyerProvider extends ChangeNotifier {
   }
 
   Future<bool> saveBuyer(Buyer buyer) async {
-    bool res = await _apiService.saveBuyer(buyer);
-    if (res) {
-      await loadBuyers();
+    int index = _buyers.indexWhere((b) => b.id == buyer.id);
+    if (index < 0 && buyer.company.trim().isNotEmpty) {
+      index = _buyers.indexWhere((b) => b.company.trim().toLowerCase() == buyer.company.trim().toLowerCase());
     }
+
+    bool isEditing = index >= 0;
+    if (isEditing) {
+      _buyers[index] = buyer;
+      _rebuildCaches(preservePage: true);
+    } else {
+      final newSrNo = _buyers.length + 1;
+      _buyers.add(buyer.copyWith(srNo: newSrNo));
+      _rebuildCaches(preservePage: false);
+      _currentPage = totalPages;
+      _firstEmailDisplayedCount = _firstEmailCache.length;
+    }
+    await _saveLocalBuyers();
+    notifyListeners();
+
+    bool res = await _apiService.saveBuyer(buyer);
     return res;
   }
 
   Future<bool> deleteBuyer(String id) async {
+    _buyers.removeWhere((b) => b.id == id);
+    _selectedBuyerIds.remove(id);
+    _rebuildCaches(preservePage: true);
+    await _saveLocalBuyers();
+    notifyListeners();
+
     bool res = await _apiService.deleteBuyer(id);
-    if (res) {
-      _selectedBuyerIds.remove(id);
-      await loadBuyers();
-    }
     return res;
   }
 

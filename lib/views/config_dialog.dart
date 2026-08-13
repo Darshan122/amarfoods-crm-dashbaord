@@ -47,7 +47,7 @@ class _ConfigDialogState extends State<ConfigDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Your Apps Script Web App URL for live 2-way sync with Amar Food Buyer New Data (Sheet5):',
+              'Your Apps Script Web App URL for live 2-way sync with Google Sheet:',
               style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
             ),
             const SizedBox(height: 16),

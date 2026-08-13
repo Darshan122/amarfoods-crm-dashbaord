@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../models/buyer.dart';
 import '../../providers/buyer_provider.dart';
@@ -8,7 +9,7 @@ import '../../services/url_utils.dart';
 /// EmailWorkSection
 ///
 /// Self-contained, reusable widget for the "TODAY'S EMAIL WORK" dashboard.
-/// Reads LIVE data from BuyerProvider (which fetches from Sheet 5).
+/// Reads LIVE data from BuyerProvider (which fetches from Google Sheet).
 ///
 /// Usage:
 ///   EmailWorkSection(provider: myBuyerProvider)
@@ -91,7 +92,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
   Widget build(BuildContext context) {
     final p = widget.provider;
 
-    // Full lists from provider (Sheet 5 live data via BuyerProvider)
+    // Full lists from provider (Google Sheet live data via BuyerProvider)
     final overdueBuyers = p.overdueBuyers;
     final followupBuyers = p.followupTodayBuyers;
     final firstEmailBuyers = p.firstEmailBuyers;
@@ -813,7 +814,6 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: emails
-                        .take(2)
                         .toList()
                         .asMap()
                         .entries
@@ -824,7 +824,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                                   const Icon(Icons.check_box_rounded,
                                       color: Color(0xFF2563EB), size: 13),
                                   const SizedBox(width: 4),
-                                  Expanded(
+                                  Flexible(
                                     child: InkWell(
                                       onTap: () => _launchEmail(e.value),
                                       child: Text(
@@ -837,6 +837,30 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Tooltip(
+                                    message: 'Copy email',
+                                    child: InkWell(
+                                      onTap: () {
+                                        Clipboard.setData(ClipboardData(text: e.value));
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Copied ${e.value} to clipboard!'),
+                                            backgroundColor: const Color(0xFF009647),
+                                            duration: const Duration(seconds: 2),
+                                            behavior: SnackBarBehavior.floating,
+                                            width: 300,
+                                          ),
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                                        child: Icon(Icons.content_copy_rounded,
+                                            size: 13, color: Color(0xFF64748B)),
                                       ),
                                     ),
                                   ),
@@ -905,13 +929,13 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
 
           // Action button
           SizedBox(
-            width: 140,
+            width: 145,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: themeColor,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 8),
+                    horizontal: 8, vertical: 8),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
                 elevation: 1,
@@ -921,18 +945,18 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                   await UrlUtils.launchEmailComposer(
                     email: buyer.email,
                     companyName: buyer.company,
-                    isFirstEmail: !isFollowup,
+                    isFirstEmail: buyer.firstEmailDate.isEmpty,
                     followupCount: buyer.followupCount,
                   );
                 }
-                p.toggleSelectBuyer(buyer.id);
-                await p.batchProcessSelected();
+                await p.markEmailSent(buyer.id);
               },
               icon: const Icon(Icons.send_rounded, size: 13),
               label: Text(
-                buttonText,
+                buyer.actionButtonLabel,
                 style: const TextStyle(
                     fontWeight: FontWeight.bold, fontSize: 11),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),

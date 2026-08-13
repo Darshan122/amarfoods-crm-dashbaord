@@ -2,6 +2,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:js' as js;
 
+import 'template_service.dart';
+import '../models/email_template.dart';
+
 class UrlUtils {
   static Future<void> launchURL(String url) async {
     if (url.isEmpty || url == 'N/A') return;
@@ -79,34 +82,24 @@ class UrlUtils {
 
     final String recipientList = allEmails.join(';');
 
-    final String company = companyName.isNotEmpty ? companyName : 'Importer';
+    // Load active template from TemplateService
+    final templateService = TemplateService();
+    final EmailTemplate template = templateService.getTemplateForType(
+      isFirstEmail ? 'first_email' : 'followup',
+      followupCount,
+    );
 
-    final String subject = isFirstEmail
-        ? 'Product Inquiry & Introduction - Amar Foods ($company)'
-        : 'Following Up: Amar Foods Inquiry - $company (Follow-Up #${followupCount > 0 ? followupCount : 1})';
+    final String subject = TemplateService.processPlaceholders(
+      template.subject,
+      company: companyName,
+      followupCount: followupCount,
+    );
 
-    final String body = isFirstEmail
-        ? '''Dear Purchasing Department / Trade Manager ($company),
-
-Greetings from Amar Foods!
-
-We specialize in exporting high-quality Dehydrated Onion, Garlic, and Food Products. We would love to discuss potential supply and partnership opportunities with $company.
-
-Could you please share your current purchasing requirements or connect us with your procurement manager?
-
-Best regards,
-Amar Foods Export Division
-Dehydrated Onion & Garlic Specialist'''
-        : '''Dear Purchasing Team ($company),
-
-I hope this email finds you well.
-
-I am following up on our previous communication regarding Dehydrated Onion & Garlic supply from Amar Foods.
-
-Please let us know if you have any questions or require updated product specifications, catalog, or pricing for $company.
-
-Best regards,
-Amar Foods Export Division''';
+    final String body = TemplateService.processPlaceholders(
+      template.body,
+      company: companyName,
+      followupCount: followupCount,
+    );
 
     // 1. Official Microsoft 365 Outlook Webmail Deeplink Compose URL (Works for amar@amarfoods.in / cloud.microsoft)
     final String outlookOfficeUrl =

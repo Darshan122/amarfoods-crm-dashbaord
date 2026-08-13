@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'dart:js' as js;
 import '../models/buyer.dart';
 
 class ApiService {
   static const String defaultScriptUrl =
-      'https://script.google.com/macros/s/AKfycbxzMWQpzmDzjYcnbXm-9cmIM8reFisS0L6JrXLL-BQ56qMfSu1qdHE_FNa21Ghf_Stp/exec';
+      'https://script.google.com/macros/s/AKfycbwyiqEkHPXvyw4JPKCjb_bDN7Glypw9ixcDIVPKqWnDXA-mWdP6opBjT6SYSZrlEtOK/exec';
 
   static const String sheetGvizCsvUrl =
-      'https://docs.google.com/spreadsheets/d/1O8BKIi482N4pfPIipraE0vl5xDw68Y0Y1v3NLyjnkrU/gviz/tq?tqx=out:csv&sheet=Sheet5';
+      'https://docs.google.com/spreadsheets/d/1jtqUJxkvQoyxTccC1gOUv1WejJigm7DMX9P66OyrhuA/gviz/tq?tqx=out:csv&sheet=Sheet1';
 
   String _scriptUrl = defaultScriptUrl;
   bool _isConnected = true;
@@ -64,73 +65,61 @@ class ApiService {
         ? customScriptUrl.trim()
         : _scriptUrl;
 
+    // 1. Direct Apps Script API fetch with cache-busting timestamp (fetches LIVE data from Google Sheet!)
     try {
-      // 1. Fast CSV export load (under 300ms)
-      final csvBuyers = await fetchBuyersViaCsv();
-      if (csvBuyers.isNotEmpty) {
-        _cachedBuyers = csvBuyers;
-        // Optionally update via Apps Script API asynchronously in background
-        _asyncBackgroundSync(targetScriptUrl);
-        return csvBuyers;
-      }
-
-      // 2. Fallback to direct Apps Script API if CSV returned empty
-      final response = await http.get(Uri.parse('$targetScriptUrl?action=getBuyers')).timeout(
-        const Duration(seconds: 4),
-      );
+      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final response = await http.get(
+        Uri.parse('$targetScriptUrl?action=getBuyers&_t=$timestamp'),
+      ).timeout(const Duration(seconds: 6));
 
       if (response.statusCode == 200) {
         _isConnected = true;
         final decoded = json.decode(response.body);
         List<Buyer> list = [];
+        List? buyerList;
+
         if (decoded is List) {
-          for (int i = 0; i < decoded.length; i++) {
-            final item = decoded[i];
-            if (item is Map<String, dynamic>) {
-              list.add(Buyer.fromJson(item, i + 1));
-            }
+          buyerList = decoded;
+        } else if (decoded is Map<String, dynamic>) {
+          if (decoded['buyers'] is List) {
+            buyerList = decoded['buyers'];
+          } else if (decoded['data'] is List) {
+            buyerList = decoded['data'];
           }
-          list = mergeDuplicateCompanies(list);
-        } else if (decoded is Map<String, dynamic> && decoded['data'] is List) {
-          final List listData = decoded['data'];
-          for (int i = 0; i < listData.length; i++) {
-            final item = listData[i];
-            if (item is Map<String, dynamic>) {
-              list.add(Buyer.fromJson(item, i + 1));
-            }
-          }
-          list = mergeDuplicateCompanies(list);
         }
-        if (list.isNotEmpty) {
-          _cachedBuyers = list;
-          return list;
+
+        if (buyerList != null) {
+          for (int i = 0; i < buyerList.length; i++) {
+            final item = buyerList[i];
+            if (item is Map<String, dynamic>) {
+              list.add(Buyer.fromJson(item, i + 1));
+            }
+          }
+          list = mergeDuplicateCompanies(list);
+          if (list.isNotEmpty) {
+            _cachedBuyers = list;
+            return list;
+          }
         }
       }
     } catch (e) {
-      _isConnected = false;
-      debugPrint('Fast API exception: $e. Using CSV fallback.');
+      debugPrint('ApiService: Direct Apps Script fetch exception: $e. Using CSV fallback.');
     }
-    final fallback = await fetchBuyersViaCsv();
-    _cachedBuyers = fallback;
-    return fallback;
-  }
 
-  void _asyncBackgroundSync(String targetUrl) {
-    http.get(Uri.parse('$targetUrl?action=getBuyers')).timeout(const Duration(seconds: 4)).then((res) {
-      if (res.statusCode == 200) {
-        final decoded = json.decode(res.body);
-        if (decoded is List || (decoded is Map<String, dynamic> && decoded['data'] is List)) {
-          // Successfully pinged Apps Script
-          _isConnected = true;
-        }
-      }
-    }).catchError((_) {});
+    // 2. Fallback to Google Sheets GVIZ CSV if Apps Script GET failed
+    final csvBuyers = await fetchBuyersViaCsv();
+    if (csvBuyers.isNotEmpty) {
+      _cachedBuyers = csvBuyers;
+      return csvBuyers;
+    }
+
+    return [];
   }
 
   Future<List<Buyer>> fetchBuyersViaCsv() async {
     try {
       final response = await http.get(Uri.parse(sheetGvizCsvUrl)).timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 15),
       );
 
       if (response.statusCode == 200) {
@@ -151,85 +140,71 @@ class ApiService {
 
     int counter = 1;
 
-    // Date regex matcher for YYYY-MM-DD or DD-MMM-YYYY
-    final dateRegex = RegExp(r'\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}-[A-Za-z]{3}-\d{4}\b');
-
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
       if (line.isEmpty || line.startsWith('Amar Foods') || line.contains('Sr. No.') || line.contains('Importer Company')) continue;
 
       final row = _splitCsvRow(line);
-      if (row.length < 3) continue;
+      if (row.length < 2) continue;
 
       int offset = 0;
-      if (row.isNotEmpty && row[0].isEmpty) {
+      if (row.isNotEmpty && row[0].replaceAll('"', '').trim().isEmpty) {
         offset = 1;
       }
+
+      String srNoStr = row.length > offset ? row[offset].replaceAll('"', '').trim() : '';
+      int srNo = int.tryParse(srNoStr) ?? counter;
 
       String company = row.length > offset + 1 ? row[offset + 1].replaceAll('"', '').trim() : '';
       String rawWebsite = row.length > offset + 2 ? row[offset + 2].replaceAll('"', '').trim() : '';
       String rawEmail = row.length > offset + 3 ? row[offset + 3].replaceAll('"', '').trim() : '';
       String phone = row.length > offset + 4 ? row[offset + 4].replaceAll('"', '').trim() : '';
       String method = row.length > offset + 5 ? row[offset + 5].replaceAll('"', '').trim() : 'Email';
-
-      // Smart Regex Date Extraction from all fields in row!
-      final List<String> extractedDates = [];
-      for (var col in row) {
-        final cleanCol = col.replaceAll('"', '').trim();
-        if (dateRegex.hasMatch(cleanCol)) {
-          extractedDates.add(cleanCol);
-        }
-      }
-
-      String connDate = extractedDates.isNotEmpty ? extractedDates[0] : '';
-      String firstEmailDate = extractedDates.length > 1 ? extractedDates[1] : (extractedDates.isNotEmpty ? extractedDates[0] : '');
-      String followUpDate = extractedDates.length > 2 ? extractedDates[2] : '';
-      String lastEmailDate = extractedDates.length > 3 ? extractedDates[3] : (extractedDates.length > 1 ? extractedDates[1] : '');
-
-      String rawReply = 'Pending';
-      String status = 'New';
-      String nextAction = 'Follow-Up';
-
-      for (var col in row) {
-        final cleanCol = col.replaceAll('"', '').trim();
-        if (cleanCol == 'Hold' || cleanCol == 'Pending' || cleanCol == 'Yes' || cleanCol == 'No Interest') {
-          rawReply = cleanCol;
-        } else if (cleanCol == 'New' || cleanCol.contains('First Email') || cleanCol.contains('Follow-Up')) {
-          if (!dateRegex.hasMatch(cleanCol) && cleanCol.length < 30) {
-            status = cleanCol;
-          }
-        }
-      }
+      String connDate = row.length > offset + 6 ? row[offset + 6].replaceAll('"', '').trim() : '';
+      String firstEmailDate = row.length > offset + 7 ? row[offset + 7].replaceAll('"', '').trim() : '';
+      String followUpDate = row.length > offset + 8 ? row[offset + 8].replaceAll('"', '').trim() : '';
+      String clientReply = row.length > offset + 9 ? row[offset + 9].replaceAll('"', '').trim() : 'Pending';
 
       String website = cleanWebsiteUrl(rawWebsite);
       String email = cleanEmailStr(rawEmail);
 
-      if (company.isEmpty && email.isEmpty) continue;
+      if (company.isEmpty && email.isEmpty && website.isEmpty) continue;
       if (company == 'N/A' || company.isEmpty) {
-        if (website.isNotEmpty) {
+        if (website.isNotEmpty && website != 'N/A') {
           company = website.replaceAll('https://', '').replaceAll('http://', '').replaceAll('www.', '').split('/')[0];
         } else {
           company = 'Importer #$counter';
         }
       }
 
+      if (clientReply.isEmpty || clientReply == '-') clientReply = 'Pending';
+
+      String status = 'New';
+      if (clientReply.toLowerCase() == 'yes') {
+        status = 'Converted';
+      } else if (clientReply.toLowerCase() == 'hold') {
+        status = 'On Hold';
+      } else if (firstEmailDate.isNotEmpty) {
+        status = 'First Email Sent';
+      }
+
       list.add(Buyer(
-        id: Buyer.formatBuyerId(counter),
-        srNo: counter,
+        id: Buyer.formatBuyerId(srNo > 0 ? srNo : counter),
+        srNo: srNo > 0 ? srNo : counter,
         company: company,
         website: website,
         email: email,
         phone: phone,
         connectionMethod: method.isEmpty ? 'Email' : method,
         connectionDate: connDate,
-        firstEmailDate: firstEmailDate.isNotEmpty ? firstEmailDate : lastEmailDate,
+        firstEmailDate: firstEmailDate,
         nextDueDate: followUpDate,
-        clientReply: rawReply,
-        lastEmailDate: lastEmailDate,
+        clientReply: clientReply,
+        lastEmailDate: firstEmailDate,
         notes: '',
-        status: status.isEmpty ? 'New' : status,
-        nextAction: nextAction.isEmpty ? 'Follow-Up' : nextAction,
-        followupCount: 0,
+        status: status,
+        nextAction: 'Follow-Up',
+        followupCount: firstEmailDate.isNotEmpty ? 1 : 0,
       ));
 
       counter++;
@@ -289,11 +264,15 @@ class ApiService {
     }
 
     final List<Buyer> result = [];
+    int counter = 1;
     for (var entry in map.entries) {
       final b = entry.value;
       final emailSet = emailsMap[entry.key] ?? {};
       final mergedEmailsStr = emailSet.join(', ');
-      result.add(b.copyWith(email: mergedEmailsStr.isNotEmpty ? mergedEmailsStr : b.email));
+      result.add(b.copyWith(
+        srNo: counter++,
+        email: mergedEmailsStr.isNotEmpty ? mergedEmailsStr : b.email,
+      ));
     }
 
     return result;
@@ -336,24 +315,51 @@ class ApiService {
         ? customScriptUrl.trim()
         : _scriptUrl;
 
+    final String buyerJson = json.encode(buyer.toJson());
+    final String base64Payload = base64Encode(utf8.encode(buyerJson));
+    final String getUrl = '$targetScriptUrl?action=updateBuyer&payload=${Uri.encodeComponent(base64Payload)}';
+
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('fetch', [
+          getUrl,
+          js.JsObject.jsify({'method': 'GET', 'mode': 'no-cors'})
+        ]);
+        debugPrint('ApiService: Sent buyer update to Google Sheet via Web fetch (no-cors)');
+        _cachedBuyers = null;
+        return true;
+      } catch (e) {
+        debugPrint('ApiService: Web no-cors fetch error: $e');
+      }
+    }
+
     try {
-      final body = json.encode({
+      final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200 || response.statusCode == 302) {
+        _cachedBuyers = null;
+        return true;
+      }
+    } catch (e) {
+      debugPrint('ApiService: HTTP GET update failed: $e');
+    }
+
+    try {
+      final jsonPayload = json.encode({
         'action': 'updateBuyer',
         'buyer': buyer.toJson(),
       });
-
       final response = await http.post(
         Uri.parse(targetScriptUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: body,
-      ).timeout(const Duration(seconds: 10));
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: jsonPayload,
+      ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200 || response.statusCode == 302) {
         _cachedBuyers = null;
         return true;
       }
     } catch (e) {
-      debugPrint('Error updating buyer on Google Sheet: $e');
+      debugPrint('ApiService: HTTP POST update failed: $e');
     }
     return false;
   }
@@ -371,7 +377,7 @@ class ApiService {
 
       final response = await http.post(
         Uri.parse(targetScriptUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
         body: body,
       ).timeout(const Duration(seconds: 12));
 

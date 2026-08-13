@@ -114,7 +114,7 @@ class BuyerDetailDialog extends StatelessWidget {
                             Icon(Icons.history_toggle_off_rounded, color: Color(0xFF8B2C69), size: 18),
                             SizedBox(width: 8),
                             Text(
-                              'Sheet5 Date & Status Matrix',
+                              'Google Sheet Date & Status Matrix',
                               style: TextStyle(color: Color(0xFF8B2C69), fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                           ],

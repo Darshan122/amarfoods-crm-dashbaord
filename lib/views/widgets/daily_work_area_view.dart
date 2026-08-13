@@ -5,7 +5,7 @@ import 'email_work_section.dart';
 /// DailyWorkAreaView
 ///
 /// Thin wrapper — delegates all UI to the shared [EmailWorkSection] widget.
-/// EmailWorkSection reads live data directly from Sheet 5 via [BuyerProvider].
+/// EmailWorkSection reads live data directly from Google Sheet via [BuyerProvider].
 class DailyWorkAreaView extends StatelessWidget {
   final BuyerProvider provider;
 

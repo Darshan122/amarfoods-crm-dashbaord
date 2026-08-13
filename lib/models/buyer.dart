@@ -153,6 +153,19 @@ class Buyer {
     return 'Follow-Up $followupCount';
   }
 
+  String get actionButtonLabel {
+    if (clientReply.toLowerCase() == 'yes' || status.toLowerCase() == 'converted') {
+      return 'Converted';
+    }
+    if (clientReply.toLowerCase() == 'hold') {
+      return 'On Hold';
+    }
+    if (followupCount == 0 || firstEmailDate.isEmpty) {
+      return 'Send First Email';
+    }
+    return 'Send Follow-Up $followupCount';
+  }
+
   static String calculateNextDueDate([DateTime? fromDate]) {
     DateTime base = fromDate ?? DateTime.now();
     DateTime next = base.add(const Duration(days: 7));

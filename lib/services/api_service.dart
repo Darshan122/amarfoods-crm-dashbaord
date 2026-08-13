@@ -314,7 +314,36 @@ class ApiService {
     return updateBuyerOnSheet(buyer);
   }
 
-  Future<bool> deleteBuyer(String id) async {
+  Future<bool> deleteBuyer(String id, {String? customScriptUrl}) async {
+    final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
+        ? customScriptUrl.trim()
+        : _scriptUrl;
+
+    final String getUrl = '$targetScriptUrl?action=deleteBuyer&id=${Uri.encodeComponent(id)}';
+
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('fetch', [
+          getUrl,
+          js.JsObject.jsify({'method': 'GET', 'mode': 'no-cors'})
+        ]);
+        debugPrint('ApiService: Sent deleteBuyer to Google Sheet via Web fetch (no-cors)');
+        _cachedBuyers = null;
+        return true;
+      } catch (e) {
+        debugPrint('ApiService: Web delete error: $e');
+      }
+    }
+
+    try {
+      final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200 || response.statusCode == 302) {
+        _cachedBuyers = null;
+        return true;
+      }
+    } catch (e) {
+      debugPrint('ApiService: HTTP delete error: $e');
+    }
     return true;
   }
 

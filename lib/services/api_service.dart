@@ -276,7 +276,6 @@ class ApiService {
     }
 
     final List<Buyer> result = [];
-    int counter = 1;
     for (var entry in map.entries) {
       final b = entry.value;
       final emailSet = emailsMap[entry.key] ?? {};

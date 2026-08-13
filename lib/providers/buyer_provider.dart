@@ -179,8 +179,6 @@ class BuyerProvider extends ChangeNotifier {
     _firstEmailCache = [];
     _allFollowupQueueCache = [];
 
-    int counter = 1;
-
     for (var b in _buyers) {
       bool matchesSearch = query.isEmpty ||
           b.company.toLowerCase().contains(query) ||
@@ -218,7 +216,7 @@ class BuyerProvider extends ChangeNotifier {
 
       // 4. All Follow-up Queue
       if (b.followupCount > 0 || b.status.contains('Follow-Up')) {
-        _allFollowupQueueCache.add(buyer);
+        _allFollowupQueueCache.add(b);
       }
     }
 

@@ -57,6 +57,9 @@ class ApiService {
   List<Buyer>? _cachedBuyers;
 
   Future<List<Buyer>> fetchBuyers({String? customScriptUrl, bool forceRefresh = false}) async {
+    // On web: always fetch fresh data so deleted/edited rows never come back from stale cache
+    if (kIsWeb) forceRefresh = true;
+
     if (!forceRefresh && _cachedBuyers != null && _cachedBuyers!.isNotEmpty) {
       return _cachedBuyers!;
     }
@@ -312,12 +315,17 @@ class ApiService {
     return updateBuyerOnSheet(buyer);
   }
 
-  Future<bool> deleteBuyer(String id, {String? customScriptUrl}) async {
+  /// Delete a buyer row from Google Sheet by its Sr. No. (Column A).
+  /// The Apps Script searches Column A for this numeric value.
+  Future<bool> deleteBuyerBySrNo(int srNo, {String? customScriptUrl}) async {
     final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
         ? customScriptUrl.trim()
         : _scriptUrl;
 
-    final String getUrl = '$targetScriptUrl?action=deleteBuyer&id=${Uri.encodeComponent(id)}';
+    // Pass the numeric srNo as the id parameter
+    final String getUrl = '$targetScriptUrl?action=deleteBuyer&id=${Uri.encodeComponent(srNo.toString())}';
+
+    _cachedBuyers = null; // Always clear cache so next fetch is fresh
 
     if (kIsWeb) {
       try {
@@ -327,25 +335,24 @@ class ApiService {
         ]);
         final img = js.context['document'].callMethod('createElement', ['img']);
         img['src'] = getUrl;
-        debugPrint('ApiService: Sent deleteBuyer to Google Sheet via Web fetch + img beacon');
-        _cachedBuyers = null;
+        debugPrint('ApiService: deleteBuyerBySrNo($srNo) sent via Web fetch + img beacon');
         return true;
       } catch (e) {
-        debugPrint('ApiService: Web delete error: $e');
+        debugPrint('ApiService: Web deleteBuyerBySrNo error: $e');
       }
     }
 
     try {
       final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 5));
       if (response.statusCode == 200 || response.statusCode == 302) {
-        _cachedBuyers = null;
         return true;
       }
     } catch (e) {
-      debugPrint('ApiService: HTTP delete error: $e');
+      debugPrint('ApiService: HTTP deleteBuyerBySrNo error: $e');
     }
-    return true;
+    return true; // Optimistic: local state already updated
   }
+
 
   Future<int> batchMarkSent(List<String> buyerIds, {bool sendEmail = false}) async {
     return buyerIds.length;

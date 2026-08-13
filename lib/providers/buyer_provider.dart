@@ -112,50 +112,17 @@ class BuyerProvider extends ChangeNotifier {
 
     try {
       final remote = await _apiService.fetchBuyers(forceRefresh: forceRefresh);
-      final local = await _loadLocalBuyers();
 
-      if (remote.isEmpty) {
-        _buyers = local;
-      } else if (local.isEmpty) {
+      if (remote.isNotEmpty) {
+        // Remote (Google Sheet) is the single source of truth.
+        // Always trust remote data. Sort by Sr. No. so display order matches sheet.
         _buyers = remote;
+        _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
       } else {
-        // Smart Merge: Preserve all local user updates (emails, follow-up counts, replies, dates, statuses)
-        final Map<String, Buyer> mapByCompany = {};
-
-        for (var b in remote) {
-          String key = b.company.trim().toLowerCase();
-          if (key.isNotEmpty) {
-            mapByCompany[key] = b;
-          }
-        }
-
-        for (var b in local) {
-          String key = b.company.trim().toLowerCase();
-          if (key.isNotEmpty && mapByCompany.containsKey(key)) {
-            final remoteB = mapByCompany[key]!;
-            mapByCompany[key] = remoteB.copyWith(
-              id: b.id.isNotEmpty ? b.id : remoteB.id,
-              company: b.company.isNotEmpty ? b.company : remoteB.company,
-              website: (b.website.isNotEmpty && b.website != 'N/A') ? b.website : remoteB.website,
-              email: b.email.isNotEmpty ? b.email : remoteB.email,
-              phone: b.phone.isNotEmpty ? b.phone : remoteB.phone,
-              connectionMethod: b.connectionMethod.isNotEmpty ? b.connectionMethod : remoteB.connectionMethod,
-              connectionDate: b.connectionDate.isNotEmpty ? b.connectionDate : remoteB.connectionDate,
-              firstEmailDate: b.firstEmailDate.isNotEmpty ? b.firstEmailDate : remoteB.firstEmailDate,
-              nextDueDate: b.nextDueDate.isNotEmpty ? b.nextDueDate : remoteB.nextDueDate,
-              clientReply: b.clientReply != 'Pending' ? b.clientReply : remoteB.clientReply,
-              lastEmailDate: b.lastEmailDate.isNotEmpty ? b.lastEmailDate : remoteB.lastEmailDate,
-              followupCount: b.followupCount > remoteB.followupCount ? b.followupCount : remoteB.followupCount,
-              status: b.status != 'New' ? b.status : remoteB.status,
-              nextAction: b.nextAction.isNotEmpty ? b.nextAction : remoteB.nextAction,
-              notes: b.notes.isNotEmpty ? b.notes : remoteB.notes,
-            );
-          } else if (key.isNotEmpty) {
-            mapByCompany[key] = b;
-          }
-        }
-
-        _buyers = mapByCompany.values.toList();
+        // No remote data — fall back to local cache.
+        final local = await _loadLocalBuyers();
+        _buyers = local;
+        _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
       }
 
       await _saveLocalBuyers();
@@ -179,8 +146,6 @@ class BuyerProvider extends ChangeNotifier {
     _firstEmailCache = [];
     _allFollowupQueueCache = [];
 
-    int counter = 1;
-
     for (var b in _buyers) {
       bool matchesSearch = query.isEmpty ||
           b.company.toLowerCase().contains(query) ||
@@ -196,8 +161,8 @@ class BuyerProvider extends ChangeNotifier {
         if (b.clientReply != _replyFilter) continue;
       }
 
-      final buyer = b.copyWith(srNo: counter++);
-      _filteredCache.add(buyer);
+      // Use actual srNo from Google Sheet — do NOT re-number
+      _filteredCache.add(b);
 
       // Category logic for Daily Work Area
       bool isConverted = b.clientReply.toLowerCase() == 'yes' || b.clientReply.toLowerCase() == 'hold';
@@ -205,21 +170,21 @@ class BuyerProvider extends ChangeNotifier {
       if (!isConverted) {
         // 1. Overdue
         if (b.nextDueDate.isNotEmpty && b.nextDueDate.compareTo(todayStr) < 0) {
-          _overdueCache.add(buyer);
+          _overdueCache.add(b);
         }
         // 2. Follow-ups Today
         if (b.isDueToday() && b.followupCount > 0 && (b.nextDueDate.isEmpty || b.nextDueDate.compareTo(todayStr) <= 0)) {
-           _followupTodayCache.add(buyer);
+           _followupTodayCache.add(b);
         }
         // 3. First Emails (Any buyer with 0 follow-ups or no first email date yet)
         if (b.followupCount == 0 || b.firstEmailDate.isEmpty || b.status == 'New' || b.status == 'First Email Pending' || b.status == 'Contacted') {
-          _firstEmailCache.add(buyer);
+          _firstEmailCache.add(b);
         }
       }
 
       // 4. All Follow-up Queue
       if (b.followupCount > 0 || b.status.contains('Follow-Up')) {
-        _allFollowupQueueCache.add(buyer);
+        _allFollowupQueueCache.add(b);
       }
     }
 
@@ -402,6 +367,7 @@ class BuyerProvider extends ChangeNotifier {
 
   // Metrics
   int get totalBuyersCount => _buyers.length;
+  int get maxSrNo => _buyers.isEmpty ? 0 : _buyers.map((b) => b.srNo).reduce((a, b) => a > b ? a : b);
   int get dueTodayCount => _buyers.where((b) => b.isDueToday() && b.clientReply != 'Yes' && b.clientReply != 'Hold').length;
   int get firstEmailCount => _buyers.where((b) => b.firstEmailDate.isEmpty || b.status == 'New' || b.status == 'First Email Pending').length;
   int get todayFollowupCount => _buyers.where((b) => b.isDueToday() && b.followupCount > 0 && b.clientReply != 'Yes' && b.clientReply != 'Hold').length;
@@ -509,35 +475,44 @@ class BuyerProvider extends ChangeNotifier {
   }
 
   Future<bool> saveBuyer(Buyer buyer) async {
-    int index = _buyers.indexWhere((b) => b.id == buyer.id);
-    if (index < 0 && buyer.company.trim().isNotEmpty) {
-      index = _buyers.indexWhere((b) => b.company.trim().toLowerCase() == buyer.company.trim().toLowerCase());
+    // PRIMARY KEY = srNo. Match by srNo first (most reliable).
+    int index = -1;
+    if (buyer.srNo > 0) {
+      index = _buyers.indexWhere((b) => b.srNo == buyer.srNo);
     }
+    // Fallback: match by formatted id (e.g. AF-00150)
+    if (index < 0 && buyer.id.isNotEmpty) {
+      index = _buyers.indexWhere((b) => b.id == buyer.id);
+    }
+    // NOTE: Do NOT fallback to company name — name can change during edit
+    // and would cause a brand-new row to be created.
 
     bool isEditing = index >= 0;
     Buyer targetBuyer = buyer;
 
     if (isEditing) {
+      // Preserve the original srNo and id — they must never change on edit.
       targetBuyer = buyer.copyWith(
         id: _buyers[index].id,
         srNo: _buyers[index].srNo,
       );
       _buyers[index] = targetBuyer;
+      _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
       _rebuildCaches(preservePage: true);
     } else {
-      int maxSrNo = 0;
-      for (var b in _buyers) {
-        if (b.srNo > maxSrNo) maxSrNo = b.srNo;
-      }
+      // New buyer — assign next sequential srNo.
+      final maxSrNo = _buyers.isEmpty
+          ? 0
+          : _buyers.map((b) => b.srNo).reduce((a, b) => a > b ? a : b);
       final nextSrNo = maxSrNo + 1;
       targetBuyer = buyer.copyWith(
         id: Buyer.formatBuyerId(nextSrNo),
         srNo: nextSrNo,
       );
       _buyers.add(targetBuyer);
+      _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
       _rebuildCaches(preservePage: false);
       _currentPage = totalPages;
-      _firstEmailDisplayedCount = _firstEmailCache.length;
     }
     await _saveLocalBuyers();
     notifyListeners();
@@ -547,13 +522,19 @@ class BuyerProvider extends ChangeNotifier {
   }
 
   Future<bool> deleteBuyer(String id) async {
-    _buyers.removeWhere((b) => b.id == id);
+    // Find the buyer by id to get its srNo (our true primary key).
+    final match = _buyers.where((b) => b.id == id).toList();
+    if (match.isEmpty) return false;
+    final srNoToDelete = match.first.srNo;
+
+    _buyers.removeWhere((b) => b.srNo == srNoToDelete);
     _selectedBuyerIds.remove(id);
     _rebuildCaches(preservePage: true);
     await _saveLocalBuyers();
     notifyListeners();
 
-    bool res = await _apiService.deleteBuyer(id);
+    // Send srNo to Apps Script so it can find the exact row in Column A.
+    bool res = await _apiService.deleteBuyerBySrNo(srNoToDelete);
     return res;
   }
 

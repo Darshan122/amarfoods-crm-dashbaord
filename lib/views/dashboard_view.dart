@@ -192,7 +192,7 @@ class _DashboardViewState extends State<DashboardView> {
                 showDialog(
                   context: context,
                   builder: (_) => BuyerDialog(
-                    nextSrNo: p.totalBuyersCount + 1,
+                    nextSrNo: p.maxSrNo + 1,
                     existingBuyers: p.buyers,
                     onSave: (newBuyer) => p.saveBuyer(newBuyer),
                   ),
@@ -341,7 +341,7 @@ class _DashboardViewState extends State<DashboardView> {
               showDialog(
                 context: context,
                 builder: (_) => BuyerDialog(
-                  nextSrNo: p.totalBuyersCount + 1,
+                  nextSrNo: p.maxSrNo + 1,
                   existingBuyers: p.buyers,
                   onSave: (newBuyer) => p.saveBuyer(newBuyer),
                 ),

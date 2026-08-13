@@ -196,8 +196,7 @@ class BuyerProvider extends ChangeNotifier {
         if (b.clientReply != _replyFilter) continue;
       }
 
-      final buyer = b.copyWith(srNo: counter++);
-      _filteredCache.add(buyer);
+      _filteredCache.add(b);
 
       // Category logic for Daily Work Area
       bool isConverted = b.clientReply.toLowerCase() == 'yes' || b.clientReply.toLowerCase() == 'hold';
@@ -205,15 +204,15 @@ class BuyerProvider extends ChangeNotifier {
       if (!isConverted) {
         // 1. Overdue
         if (b.nextDueDate.isNotEmpty && b.nextDueDate.compareTo(todayStr) < 0) {
-          _overdueCache.add(buyer);
+          _overdueCache.add(b);
         }
         // 2. Follow-ups Today
         if (b.isDueToday() && b.followupCount > 0 && (b.nextDueDate.isEmpty || b.nextDueDate.compareTo(todayStr) <= 0)) {
-           _followupTodayCache.add(buyer);
+           _followupTodayCache.add(b);
         }
         // 3. First Emails (Any buyer with 0 follow-ups or no first email date yet)
         if (b.followupCount == 0 || b.firstEmailDate.isEmpty || b.status == 'New' || b.status == 'First Email Pending' || b.status == 'Contacted') {
-          _firstEmailCache.add(buyer);
+          _firstEmailCache.add(b);
         }
       }
 
@@ -519,8 +518,16 @@ class BuyerProvider extends ChangeNotifier {
       _buyers[index] = buyer;
       _rebuildCaches(preservePage: true);
     } else {
-      final newSrNo = _buyers.length + 1;
-      _buyers.add(buyer.copyWith(srNo: newSrNo));
+      int maxSrNo = 0;
+      for (var b in _buyers) {
+        if (b.srNo > maxSrNo) maxSrNo = b.srNo;
+      }
+      final nextSrNo = maxSrNo + 1;
+      final newBuyer = buyer.copyWith(
+        id: Buyer.formatBuyerId(nextSrNo),
+        srNo: nextSrNo,
+      );
+      _buyers.add(newBuyer);
       _rebuildCaches(preservePage: false);
       _currentPage = totalPages;
       _firstEmailDisplayedCount = _firstEmailCache.length;

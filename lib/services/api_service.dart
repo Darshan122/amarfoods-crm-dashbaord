@@ -282,7 +282,6 @@ class ApiService {
       final emailSet = emailsMap[entry.key] ?? {};
       final mergedEmailsStr = emailSet.join(', ');
       result.add(b.copyWith(
-        srNo: counter++,
         email: mergedEmailsStr.isNotEmpty ? mergedEmailsStr : b.email,
       ));
     }

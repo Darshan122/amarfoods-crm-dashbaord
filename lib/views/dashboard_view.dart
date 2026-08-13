@@ -288,7 +288,7 @@ class _DashboardViewState extends State<DashboardView> {
                   onTap: () => p.setActiveTab(MainTab.dailyWorkArea),
                 ),
                 _buildNavTab(
-                  label: 'All Importers (${p.totalBuyersCount})',
+                  label: 'All Buyers (${p.totalBuyersCount})',
                   icon: Icons.people_outline_rounded,
                   isActive: p.activeTab == MainTab.allImporters,
                   onTap: () => p.setActiveTab(MainTab.allImporters),
@@ -349,7 +349,7 @@ class _DashboardViewState extends State<DashboardView> {
             },
             icon: const Icon(Icons.add_rounded, size: 16),
             label: const Text(
-              'Add Importer',
+              'Add Buyer',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
           ),
@@ -548,7 +548,7 @@ class _DashboardViewState extends State<DashboardView> {
                   ),
                 ),
                 child: const Text(
-                  'No importers found matching your filters.',
+                  'No buyers found matching your filters.',
                   style: TextStyle(
                       color: Color(0xFF64748B),
                       fontWeight: FontWeight.w500,
@@ -601,8 +601,8 @@ class _DashboardViewState extends State<DashboardView> {
           // Left: Showing X to Y of Z importers
           Text(
             totalItems == 0
-                ? 'Showing 0 importers'
-                : 'Showing $start to $end of $totalItems importers',
+                ? 'Showing 0 buyers'
+                : 'Showing $start to $end of $totalItems buyers',
             style: const TextStyle(
               color: Color(0xFF475569),
               fontSize: 12,
@@ -1167,7 +1167,7 @@ class _DashboardViewState extends State<DashboardView> {
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: const Text('Delete Importer?'),
+                      title: const Text('Delete Buyer?'),
                       content: Text('Are you sure you want to delete "${b.company}"?'),
                       actions: [
                         TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),

@@ -98,7 +98,7 @@ class ApiService {
               list.add(Buyer.fromJson(item, i + 1));
             }
           }
-          list = mergeDuplicateCompanies(list);
+          // No deduplication — show every row as a separate buyer (Sr. No. = primary key)
           if (list.isNotEmpty) {
             _cachedBuyers = list;
             return list;
@@ -225,7 +225,8 @@ class ApiService {
       counter++;
     }
 
-    return mergeDuplicateCompanies(list);
+    // Return list as-is — no deduplication, each Sr. No. row is a separate buyer
+    return list;
   }
 
   List<Buyer> mergeDuplicateCompanies(List<Buyer> rawList) {

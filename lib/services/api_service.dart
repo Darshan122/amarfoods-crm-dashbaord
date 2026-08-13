@@ -327,7 +327,9 @@ class ApiService {
           getUrl,
           js.JsObject.jsify({'method': 'GET', 'mode': 'no-cors'})
         ]);
-        debugPrint('ApiService: Sent deleteBuyer to Google Sheet via Web fetch (no-cors)');
+        final img = js.context['document'].callMethod('createElement', ['img']);
+        img['src'] = getUrl;
+        debugPrint('ApiService: Sent deleteBuyer to Google Sheet via Web fetch + img beacon');
         _cachedBuyers = null;
         return true;
       } catch (e) {
@@ -366,7 +368,9 @@ class ApiService {
           getUrl,
           js.JsObject.jsify({'method': 'GET', 'mode': 'no-cors'})
         ]);
-        debugPrint('ApiService: Sent buyer update to Google Sheet via Web fetch (no-cors)');
+        final img = js.context['document'].callMethod('createElement', ['img']);
+        img['src'] = getUrl;
+        debugPrint('ApiService: Sent buyer update to Google Sheet via Web fetch + img beacon');
         _cachedBuyers = null;
         return true;
       } catch (e) {

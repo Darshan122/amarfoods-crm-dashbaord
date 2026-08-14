@@ -461,7 +461,28 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                                     tooltip: 'Delete Template',
                                     icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
                                     onPressed: () async {
-                                      await _templateService.deleteTemplate(t.id);
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                          title: const Text('Delete Template', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                          content: Text('Are you sure you want to delete "${t.name}"?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx, false),
+                                              child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () => Navigator.pop(ctx, true),
+                                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white),
+                                              child: const Text('Delete'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        await _templateService.deleteTemplate(t.id);
+                                      }
                                     },
                                   ),
                               ],

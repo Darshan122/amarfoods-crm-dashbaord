@@ -147,7 +147,12 @@ Amar Foods Export Division''',
     if (index >= 0) {
       _templates[index] = template;
     } else {
-      _templates.add(template);
+      final stageIndex = _templates.indexWhere((t) => t.type == template.type && template.type != 'custom');
+      if (stageIndex >= 0) {
+        _templates[stageIndex] = template;
+      } else {
+        _templates.add(template);
+      }
     }
     await _saveToStorage();
     notifyListeners();

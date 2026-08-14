@@ -70,29 +70,36 @@ class UrlUtils {
   }
 
   // ─── Open a single Outlook Webmail compose window ──────────────────────────
-  // Each call opens ONE window with ONE recipient (confidential outreach).
-  static Future<void> _openOutlookCompose({
+  // Called synchronously to preserve user click stack and bypass browser popup blocking
+  static void _openOutlookCompose({
     required String toEmail,
     required String subject,
     required String body,
-  }) async {
-    // Microsoft 365 / Work Outlook deeplink
+  }) {
     final String url =
         'https://outlook.office.com/mail/deeplink/compose'
         '?to=${Uri.encodeComponent(toEmail)}'
         '&subject=${Uri.encodeComponent(subject)}'
         '&body=${Uri.encodeComponent(body)}';
-    await launchURL(url);
+
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('open', [url, '_blank']);
+      } catch (e) {
+        launchURL(url);
+      }
+    } else {
+      launchURL(url);
+    }
   }
 
-  /// Launch Outlook Webmail composer with confidential multi-contact support.
+  /// Launch Outlook Webmail composer with multi-contact support.
   ///
-  /// • 1 email  → opens Outlook directly, no dialog.
-  /// • 2+ emails → shows dialog:
-  ///     [Primary Only]       Opens 1 Outlook window for the first/primary email.
-  ///     [Send to All Privately]  Opens a SEPARATE Outlook window per email,
-  ///                          each with exactly 1 TO address — no CC, no BCC.
-  ///                          Recipients never know others were contacted.
+  /// • 1 email   → opens Outlook directly, no dialog.
+  /// • 2+ emails → shows dialog listing each contact with direct action buttons:
+  ///                 - Click any contact's "Send Email" button to send to that person.
+  ///                 - Click "Primary Only" to send to the first email.
+  ///                 - Click "Send to All Privately" to open Outlook tabs for ALL contacts.
   static Future<void> launchEmailComposer({
     required String email,
     required String companyName,
@@ -128,7 +135,7 @@ class UrlUtils {
 
     // ── SINGLE EMAIL: open Outlook directly, no dialog needed ──────────────
     if (allEmails.length == 1) {
-      await _openOutlookCompose(
+      _openOutlookCompose(
         toEmail: allEmails.first,
         subject: subject,
         body: body,
@@ -138,8 +145,7 @@ class UrlUtils {
 
     // ── MULTIPLE EMAILS: show confidential outreach dialog ─────────────────
     if (context == null || !(context.mounted)) {
-      // No context available — fall back to primary email only
-      await _openOutlookCompose(
+      _openOutlookCompose(
         toEmail: allEmails.first,
         subject: subject,
         body: body,
@@ -176,52 +182,77 @@ class UrlUtils {
               style: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
             ),
             const SizedBox(height: 12),
-            // List all emails for reference
+            // List each email with direct "Send Email" action button
             ...allEmails.asMap().entries.map((e) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    children: [
-                      Icon(
-                        e.key == 0
-                            ? Icons.star_rounded
-                            : Icons.person_outline_rounded,
-                        size: 14,
-                        color: e.key == 0
-                            ? const Color(0xFF15803D)
-                            : const Color(0xFF64748B),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: e.key == 0 ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: e.key == 0 ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
                       ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          e.value,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: e.key == 0
-                                ? const Color(0xFF15803D)
-                                : const Color(0xFF334155),
-                            fontWeight: e.key == 0
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          e.key == 0
+                              ? Icons.star_rounded
+                              : Icons.person_outline_rounded,
+                          size: 16,
+                          color: e.key == 0
+                              ? const Color(0xFF15803D)
+                              : const Color(0xFF64748B),
                         ),
-                      ),
-                      if (e.key == 0)
-                        Container(
-                          margin: const EdgeInsets.only(left: 4),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(4),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                e.value,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: e.key == 0
+                                      ? const Color(0xFF15803D)
+                                      : const Color(0xFF334155),
+                                  fontWeight: e.key == 0
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (e.key == 0)
+                                const Text(
+                                  'Primary Contact',
+                                  style: TextStyle(fontSize: 9, color: Color(0xFF15803D), fontWeight: FontWeight.w600),
+                                ),
+                            ],
                           ),
-                          child: const Text('Primary',
-                              style: TextStyle(
-                                  fontSize: 9,
-                                  color: Color(0xFF15803D),
-                                  fontWeight: FontWeight.bold)),
                         ),
-                    ],
+                        InkWell(
+                          onTap: () => Navigator.pop(ctx, 'email:${e.value}'),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.send_rounded, size: 10, color: Color(0xFF2563EB)),
+                                SizedBox(width: 4),
+                                Text('Send Email', style: TextStyle(fontSize: 10, color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 )),
             const SizedBox(height: 12),
@@ -286,25 +317,28 @@ class UrlUtils {
     if (choice == null) return; // User cancelled
 
     if (choice == 'primary') {
-      // Send to primary (first) email only — 1 Outlook window
-      await _openOutlookCompose(
+      _openOutlookCompose(
         toEmail: allEmails.first,
         subject: subject,
         body: body,
       );
     } else if (choice == 'all') {
-      // Open a SEPARATE Outlook window for each email, one by one.
+      // Synchronously open a SEPARATE Outlook tab for each email.
       // Each window has exactly 1 recipient in TO — no CC, no BCC.
-      // Each person thinks they are the only one contacted.
       for (final singleEmail in allEmails) {
-        await _openOutlookCompose(
+        _openOutlookCompose(
           toEmail: singleEmail,
           subject: subject,
           body: body,
         );
-        // Small delay so browser doesn't block multiple popup windows
-        await Future.delayed(const Duration(milliseconds: 700));
       }
+    } else if (choice.startsWith('email:')) {
+      final targetEmail = choice.substring('email:'.length);
+      _openOutlookCompose(
+        toEmail: targetEmail,
+        subject: subject,
+        body: body,
+      );
     }
   }
 

@@ -852,6 +852,7 @@ class _DashboardViewState extends State<DashboardView> {
                                       companyName: b.company,
                                       isFirstEmail: b.firstEmailDate.isEmpty,
                                       followupCount: b.followupCount,
+                                      context: context,
                                     ),
                                     child: Text(
                                       e.value,
@@ -1266,6 +1267,7 @@ class _DashboardViewState extends State<DashboardView> {
                         companyName: b.company,
                         isFirstEmail: b.firstEmailDate.isEmpty,
                         followupCount: b.followupCount,
+                        context: context,
                       );
                     }
                     await p.markEmailSent(b.id);

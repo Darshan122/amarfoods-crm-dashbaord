@@ -180,6 +180,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                       companyName: b.company,
                       isFirstEmail: false,
                       followupCount: b.followupCount,
+                      context: context,
                     );
                   }
                 }
@@ -216,6 +217,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                       email: b.email,
                       companyName: b.company,
                       isFirstEmail: true,
+                      context: context,
                     );
                   }
                 }
@@ -947,6 +949,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                     companyName: buyer.company,
                     isFirstEmail: buyer.firstEmailDate.isEmpty,
                     followupCount: buyer.followupCount,
+                    context: context,
                   );
                 }
                 await p.markEmailSent(buyer.id);

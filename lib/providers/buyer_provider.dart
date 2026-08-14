@@ -61,6 +61,10 @@ class BuyerProvider extends ChangeNotifier {
   void setActiveTab(MainTab tab) {
     if (_activeTab == tab) return;
     _activeTab = tab;
+    // Clear search when switching tabs — each tab has an independent search state
+    _searchDebounce?.cancel();
+    _searchQuery = '';
+    _rebuildCaches();
     resetPagination();
   }
 

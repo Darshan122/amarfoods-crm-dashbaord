@@ -22,15 +22,27 @@ class DashboardView extends StatefulWidget {
 
 class _DashboardViewState extends State<DashboardView> {
   late ScrollController _scrollController;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
+    // Listen to provider: when searchQuery is cleared (tab switch), clear the text field too
+    widget.provider.addListener(_syncSearchController);
+  }
+
+  void _syncSearchController() {
+    // If provider's search was cleared (e.g. tab switched) and our TextField still shows text, clear it
+    if (widget.provider.searchQuery.isEmpty && _searchController.text.isNotEmpty) {
+      _searchController.clear();
+    }
   }
 
   @override
   void dispose() {
+    widget.provider.removeListener(_syncSearchController);
+    _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -1319,6 +1331,7 @@ class _DashboardViewState extends State<DashboardView> {
           SizedBox(
             height: 38,
             child: TextField(
+              controller: _searchController,
               onChanged: p.setSearchQuery,
               style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
               decoration: InputDecoration(
@@ -1327,6 +1340,15 @@ class _DashboardViewState extends State<DashboardView> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
                 filled: true,
                 fillColor: const Color(0xFFF8FAFC),
+                suffixIcon: p.searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close, size: 16, color: Color(0xFF64748B)),
+                        onPressed: () {
+                          _searchController.clear();
+                          p.setSearchQuery('');
+                        },
+                      )
+                    : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: const BorderSide(color: Color(0xFFE2E8F0)),

@@ -153,189 +153,198 @@ class UrlUtils {
       return;
     }
 
-    final String? choice = await showDialog<String>(
+    final List<String>? selectedEmails = await showDialog<List<String>>(
       context: context,
       barrierDismissible: true,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.mark_email_unread_rounded,
-                color: Color(0xFF8B2C69), size: 22),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                companyName,
-                style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'This company has ${allEmails.length} email contacts.',
-              style: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
-            ),
-            const SizedBox(height: 12),
-            // List each email with direct "Send Email" action button
-            ...allEmails.asMap().entries.map((e) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: e.key == 0 ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: e.key == 0 ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
-                      ),
+      builder: (ctx) {
+        // Pre-select ALL emails by default
+        final Set<String> checkedEmails = Set<String>.from(allEmails);
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final int selectedCount = checkedEmails.length;
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  const Icon(Icons.mark_email_unread_rounded,
+                      color: Color(0xFF8B2C69), size: 22),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      companyName,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          e.key == 0
-                              ? Icons.star_rounded
-                              : Icons.person_outline_rounded,
-                          size: 16,
-                          color: e.key == 0
-                              ? const Color(0xFF15803D)
-                              : const Color(0xFF64748B),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Select contacts to email (${allEmails.length} available):',
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
+                  ),
+                  const SizedBox(height: 12),
+                  // Checkbox list for each email contact
+                  ...allEmails.asMap().entries.map((e) {
+                    final emailStr = e.value;
+                    final isChecked = checkedEmails.contains(emailStr);
+                    final isPrimary = e.key == 0;
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            if (isChecked) {
+                              checkedEmails.remove(emailStr);
+                            } else {
+                              checkedEmails.add(emailStr);
+                            }
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isChecked
+                                ? (isPrimary ? const Color(0xFFF0FDF4) : const Color(0xFFF0F9FF))
+                                : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isChecked
+                                  ? (isPrimary ? const Color(0xFF86EFAC) : const Color(0xFFBAE6FD))
+                                  : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: Row(
                             children: [
-                              Text(
-                                e.value,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: e.key == 0
-                                      ? const Color(0xFF15803D)
-                                      : const Color(0xFF334155),
-                                  fontWeight: e.key == 0
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
+                              SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: Checkbox(
+                                  value: isChecked,
+                                  activeColor: isPrimary ? const Color(0xFF15803D) : const Color(0xFF0284C7),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (val == true) {
+                                        checkedEmails.add(emailStr);
+                                      } else {
+                                        checkedEmails.remove(emailStr);
+                                      }
+                                    });
+                                  },
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
-                              if (e.key == 0)
-                                const Text(
-                                  'Primary Contact',
-                                  style: TextStyle(fontSize: 9, color: Color(0xFF15803D), fontWeight: FontWeight.w600),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      emailStr,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isChecked
+                                            ? (isPrimary ? const Color(0xFF15803D) : const Color(0xFF0369A1))
+                                            : const Color(0xFF64748B),
+                                        fontWeight: isPrimary ? FontWeight.bold : FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (isPrimary)
+                                      const Text(
+                                        'Primary Contact',
+                                        style: TextStyle(fontSize: 9, color: Color(0xFF15803D), fontWeight: FontWeight.w600),
+                                      ),
+                                  ],
                                 ),
+                              ),
                             ],
                           ),
                         ),
-                        InkWell(
-                          onTap: () => Navigator.pop(ctx, 'email:${e.value}'),
-                          borderRadius: BorderRadius.circular(6),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFBFDBFE)),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.send_rounded, size: 10, color: Color(0xFF2563EB)),
-                                SizedBox(width: 4),
-                                Text('Send Email', style: TextStyle(fontSize: 10, color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),
-                              ],
-                            ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 12),
+                  // Confidential notice
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFED7AA)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.lock_outline_rounded,
+                            size: 13, color: Color(0xFFD97706)),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Confidential: Each selected person gets a separate Outlook tab. '
+                            'Nobody knows others were contacted.',
+                            style: TextStyle(fontSize: 11, color: Color(0xFFD97706)),
                           ),
                         ),
                       ],
                     ),
                   ),
-                )),
-            const SizedBox(height: 12),
-            // Confidential notice
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFED7AA)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.lock_outline_rounded,
-                      size: 13, color: Color(0xFFD97706)),
-                  SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Confidential: Each person gets a separate Outlook email. '
-                      'Nobody knows others were contacted.',
-                      style: TextStyle(fontSize: 11, color: Color(0xFFD97706)),
-                    ),
-                  ),
                 ],
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, null),
-            child: const Text('Cancel',
-                style: TextStyle(color: Color(0xFF64748B))),
-          ),
-          OutlinedButton.icon(
-            onPressed: () => Navigator.pop(ctx, 'primary'),
-            icon: const Icon(Icons.star_rounded, size: 14),
-            label: const Text('Primary Only', style: TextStyle(fontSize: 12)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF15803D),
-              side: const BorderSide(color: Color(0xFF15803D)),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.pop(ctx, 'all'),
-            icon: const Icon(Icons.send_rounded, size: 14),
-            label: Text('Send to All ${allEmails.length} Privately',
-                style: const TextStyle(fontSize: 12)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF8B2C69),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-        ],
-      ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, null),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Color(0xFF64748B))),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx, [allEmails.first]);
+                  },
+                  icon: const Icon(Icons.star_rounded, size: 14),
+                  label: const Text('Primary Only', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF15803D),
+                    side: const BorderSide(color: Color(0xFF15803D)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: selectedCount == 0
+                      ? null
+                      : () {
+                          Navigator.pop(ctx, checkedEmails.toList());
+                        },
+                  icon: const Icon(Icons.send_rounded, size: 14),
+                  label: Text('Open $selectedCount Selected in Outlook',
+                      style: const TextStyle(fontSize: 12)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8B2C69),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
 
-    if (choice == null) return; // User cancelled
+    if (selectedEmails == null || selectedEmails.isEmpty) return; // User cancelled or none selected
 
-    if (choice == 'primary') {
+    // Open a SEPARATE Outlook tab for each checked email synchronously
+    for (final singleEmail in selectedEmails) {
       _openOutlookCompose(
-        toEmail: allEmails.first,
-        subject: subject,
-        body: body,
-      );
-    } else if (choice == 'all') {
-      // Synchronously open a SEPARATE Outlook tab for each email.
-      // Each window has exactly 1 recipient in TO — no CC, no BCC.
-      for (final singleEmail in allEmails) {
-        _openOutlookCompose(
-          toEmail: singleEmail,
-          subject: subject,
-          body: body,
-        );
-      }
-    } else if (choice.startsWith('email:')) {
-      final targetEmail = choice.substring('email:'.length);
-      _openOutlookCompose(
-        toEmail: targetEmail,
+        toEmail: singleEmail,
         subject: subject,
         body: body,
       );

@@ -1261,16 +1261,11 @@ class _DashboardViewState extends State<DashboardView> {
                     elevation: 1,
                   ),
                   onPressed: () async {
-                    if (b.email.isNotEmpty) {
-                      await UrlUtils.launchEmailComposer(
-                        email: b.email,
-                        companyName: b.company,
-                        isFirstEmail: b.firstEmailDate.isEmpty,
-                        followupCount: b.followupCount,
-                        context: context,
-                      );
-                    }
-                    await p.markEmailSent(b.id);
+                    await UrlUtils.handleSendEmailWithConfirmation(
+                      context: context,
+                      buyer: b,
+                      provider: p,
+                    );
                   },
                   icon: const Icon(Icons.send_rounded, size: 13),
                   label: Text(b.actionButtonLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),

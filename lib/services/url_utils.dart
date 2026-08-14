@@ -5,6 +5,8 @@ import 'dart:js' as js;
 
 import 'template_service.dart';
 import '../models/email_template.dart';
+import '../models/buyer.dart';
+import '../providers/buyer_provider.dart';
 
 class UrlUtils {
   static Future<void> launchURL(String url) async {
@@ -304,5 +306,166 @@ class UrlUtils {
         await Future.delayed(const Duration(milliseconds: 700));
       }
     }
+  }
+
+  /// Option 1 + Option 2 Combined Double Safety Email Handler:
+  ///
+  /// 1. Opens Outlook Webmail composer.
+  /// 2. Shows Option 1 Dialog: "Did you actually send the email?"
+  ///    If user clicks "No, Keep in List", nothing changes.
+  /// 3. If user clicks "Yes, Mark as Sent ✅", updates buyer status AND
+  ///    shows Option 2 Undo Toast (SnackBar) with 10-second timer to undo.
+  static Future<void> handleSendEmailWithConfirmation({
+    required BuildContext context,
+    required Buyer buyer,
+    required BuyerProvider provider,
+  }) async {
+    // Keep a copy of the buyer before any mutation
+    final previousBuyer = buyer;
+
+    // 1. Launch Outlook compose window(s)
+    if (buyer.email.isNotEmpty) {
+      await launchEmailComposer(
+        email: buyer.email,
+        companyName: buyer.company,
+        isFirstEmail: buyer.firstEmailDate.isEmpty,
+        followupCount: buyer.followupCount,
+        context: context,
+      );
+    }
+
+    if (!context.mounted) return;
+
+    // 2. Option 1: Confirmation Dialog
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.help_outline_rounded, color: Color(0xFF8B2C69), size: 24),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Did you send the email?',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Company: ${buyer.company}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Email: ${buyer.email}',
+              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Text(
+                'Click "Yes, Mark as Sent" only if you completed sending the email in Outlook.\n\n'
+                'If you clicked by mistake or did not send it, click "No, Keep in List".',
+                style: TextStyle(fontSize: 11, color: Color(0xFF475569)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          OutlinedButton.icon(
+            onPressed: () => Navigator.pop(ctx, false),
+            icon: const Icon(Icons.close_rounded, size: 15),
+            label: const Text('No, Keep in List', style: TextStyle(fontSize: 12)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF64748B),
+              side: const BorderSide(color: Color(0xFFCBD5E1)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.check_circle_rounded, size: 15),
+            label: const Text('Yes, Mark as Sent ✅', style: TextStyle(fontSize: 12)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF15803D),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // If user selected "No, Keep in List" or closed dialog -> DO NOT MARK AS SENT
+    if (confirmed != true) return;
+
+    // 3. Perform Mark as Sent
+    await provider.markEmailSent(buyer.id);
+
+    if (!context.mounted) return;
+
+    // 4. Option 2: Show Undo Toast (SnackBar) with 10s duration
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 10),
+        backgroundColor: const Color(0xFF0F172A),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Color(0xFF4ADE80), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Marked "${buyer.company}" as Email Sent',
+                style: const TextStyle(fontSize: 13, color: Colors.white),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        action: SnackBarAction(
+          label: 'UNDO ↩',
+          textColor: const Color(0xFFFACC15),
+          onPressed: () async {
+            await provider.revertBuyer(previousBuyer);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  duration: const Duration(seconds: 4),
+                  backgroundColor: const Color(0xFF1E293B),
+                  behavior: SnackBarBehavior.floating,
+                  content: Row(
+                    children: [
+                      const Icon(Icons.undo_rounded, color: Color(0xFFFACC15), size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Restored "${buyer.company}" back to list',
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+          },
+        ),
+      ),
+    );
   }
 }

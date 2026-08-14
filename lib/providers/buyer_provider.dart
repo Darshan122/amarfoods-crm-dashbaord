@@ -455,6 +455,22 @@ class BuyerProvider extends ChangeNotifier {
     return true;
   }
 
+  Future<bool> revertBuyer(Buyer oldBuyer) async {
+    final index = _buyers.indexWhere((b) => b.srNo == oldBuyer.srNo || b.id == oldBuyer.id);
+    if (index >= 0) {
+      _buyers[index] = oldBuyer;
+    } else {
+      _buyers.add(oldBuyer);
+    }
+    _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
+    _rebuildCaches(preservePage: true);
+    await _saveLocalBuyers();
+    notifyListeners();
+
+    bool res = await _apiService.saveBuyer(oldBuyer);
+    return res;
+  }
+
   Future<bool> batchProcessSelected({bool sendGmail = false}) async {
     if (_selectedBuyerIds.isEmpty) return false;
 

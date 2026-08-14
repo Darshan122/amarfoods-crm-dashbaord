@@ -173,7 +173,8 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
               isFollowup: true,
               showBatchButton: true,
               batchAction: () async {
-                for (var b in followupBuyers.take(5)) {
+                final targetBuyers = followupBuyers.take(5).toList();
+                for (var b in targetBuyers) {
                   if (b.email.isNotEmpty) {
                     await UrlUtils.launchEmailComposer(
                       email: b.email,
@@ -184,8 +185,31 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                     );
                   }
                 }
-                final ids = followupBuyers.map((b) => b.id).toList();
-                await p.batchProcessSelectedCustom(ids);
+                if (!context.mounted) return;
+                final bool? ok = await showDialog<bool>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (ctx) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: const Text('Confirm Batch Action', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    content: Text('Did you complete sending emails for all ${targetBuyers.length} follow-up companies in Outlook?'),
+                    actions: [
+                      OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('No, Keep in List', style: TextStyle(color: Color(0xFF64748B))),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF15803D), foregroundColor: Colors.white),
+                        child: const Text('Yes, Mark All as Sent ✅'),
+                      ),
+                    ],
+                  ),
+                );
+                if (ok == true) {
+                  final ids = targetBuyers.map((b) => b.id).toList();
+                  await p.batchProcessSelectedCustom(ids);
+                }
               },
               batchLabel: 'Send All Follow-Ups Today',
             ),
@@ -211,7 +235,8 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
               isFollowup: false,
               showBatchButton: true,
               batchAction: () async {
-                for (var b in firstEmailBuyers.take(5)) {
+                final targetBuyers = firstEmailBuyers.take(5).toList();
+                for (var b in targetBuyers) {
                   if (b.email.isNotEmpty) {
                     await UrlUtils.launchEmailComposer(
                       email: b.email,
@@ -221,8 +246,31 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                     );
                   }
                 }
-                final ids = firstEmailBuyers.map((b) => b.id).toList();
-                await p.batchProcessSelectedCustom(ids);
+                if (!context.mounted) return;
+                final bool? ok = await showDialog<bool>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (ctx) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: const Text('Confirm Batch Action', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    content: Text('Did you complete sending first emails for all ${targetBuyers.length} companies in Outlook?'),
+                    actions: [
+                      OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('No, Keep in List', style: TextStyle(color: Color(0xFF64748B))),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF15803D), foregroundColor: Colors.white),
+                        child: const Text('Yes, Mark All as Sent ✅'),
+                      ),
+                    ],
+                  ),
+                );
+                if (ok == true) {
+                  final ids = targetBuyers.map((b) => b.id).toList();
+                  await p.batchProcessSelectedCustom(ids);
+                }
               },
               batchLabel: 'Send All First Emails',
             ),
@@ -943,16 +991,11 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                 elevation: 1,
               ),
               onPressed: () async {
-                if (buyer.email.isNotEmpty) {
-                  await UrlUtils.launchEmailComposer(
-                    email: buyer.email,
-                    companyName: buyer.company,
-                    isFirstEmail: buyer.firstEmailDate.isEmpty,
-                    followupCount: buyer.followupCount,
-                    context: context,
-                  );
-                }
-                await p.markEmailSent(buyer.id);
+                await UrlUtils.handleSendEmailWithConfirmation(
+                  context: context,
+                  buyer: buyer,
+                  provider: p,
+                );
               },
               icon: const Icon(Icons.send_rounded, size: 13),
               label: Text(

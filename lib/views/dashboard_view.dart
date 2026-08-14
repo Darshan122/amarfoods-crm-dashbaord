@@ -147,13 +147,17 @@ class _DashboardViewState extends State<DashboardView> {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
               ),
-              child: const Icon(Icons.business_rounded, color: Colors.white, size: 18),
+              child: Image.asset(
+                'assets/images/amar_foods_logo.png',
+                height: 24,
+                fit: BoxFit.contain,
+                errorBuilder: (ctx, err, stack) => const Icon(Icons.business_rounded, color: Color(0xFF8B2C69), size: 18),
+              ),
             ),
             const SizedBox(width: 10),
             const Column(
@@ -226,15 +230,26 @@ class _DashboardViewState extends State<DashboardView> {
       ),
       child: Row(
         children: [
-          // Logo Icon Square
+          // Official Amar Foods Logo Image
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            child: const Icon(Icons.business_rounded, color: Colors.white, size: 24),
+            child: Image.asset(
+              'assets/images/amar_foods_logo.png',
+              height: 38,
+              fit: BoxFit.contain,
+              errorBuilder: (ctx, err, stack) => const Icon(Icons.business_rounded, color: Color(0xFF8B2C69), size: 24),
+            ),
           ),
           const SizedBox(width: 14),
 

@@ -118,6 +118,9 @@ class UrlUtils {
 
     // Build subject & body from active template
     final templateService = TemplateService();
+    if (!templateService.isInitialized) {
+      await templateService.init();
+    }
     final EmailTemplate template = templateService.getTemplateForType(
       isFirstEmail ? 'first_email' : 'followup',
       followupCount,

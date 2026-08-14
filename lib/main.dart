@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'providers/buyer_provider.dart';
 import 'views/dashboard_view.dart';
 
+import 'services/template_service.dart';
+
 class AppScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
@@ -34,6 +36,7 @@ class _BuyerCRMAppState extends State<BuyerCRMApp> {
   void initState() {
     super.initState();
     _buyerProvider = BuyerProvider();
+    TemplateService().init();
   }
 
   @override

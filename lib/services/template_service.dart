@@ -182,7 +182,7 @@ Amar Foods Export Division''',
   }) {
     String cleanCompany = company.isNotEmpty ? company : 'Importer';
     return text
-        .replaceAll('{company}', cleanCompany)
-        .replaceAll('{followup_count}', followupCount > 0 ? followupCount.toString() : '1');
+        .replaceAll(RegExp(r'\{\{?\s*company\s*\}?\}', caseSensitive: false), cleanCompany)
+        .replaceAll(RegExp(r'\{\{?\s*followup_count\s*\}?\}', caseSensitive: false), followupCount > 0 ? followupCount.toString() : '1');
   }
 }

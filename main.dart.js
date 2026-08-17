@@ -47425,9 +47425,9 @@ return this.Br(a,s,s,s,s,s,s,s,s,s,s,s)},
 a0r(){var s,r,q,p=this.z.toLowerCase()
 if(p==="yes"||p==="converted")return!1
 s=this.y
-if(s.length===0)return!0
+if(B.c.b4(s).length===0)return!1
 r=A.aFo(s)
-if(r==null)return!0
+if(r==null)return!1
 q=new A.ck(Date.now(),0,!1)
 return!r.tf(A.c3(A.bi(q),A.bk(q),A.ci(q),0,0,0,0))},
 ax0(){var s,r,q,p=this.z.toLowerCase()
@@ -47582,7 +47582,7 @@ n=!0
 if(r.as<=0)if(B.c.b4(r.x).length===0){p=r.at
 p=A.q1(p,"Follow-Up",0)||p==="First Email Sent"
 n=p}if(!o){if(r.ax0())m.Q.push(r)
-if(r.a0r()&&n)m.as.push(r)
+if(r.a0r())m.as.push(r)
 if(n){p=r.at
 p=p==="New"||p==="First Email Pending"}else p=!0
 if(p)m.at.push(r)}if(n)m.ax.push(r)}m.db=m.cy=m.cx=m.CW=m.ch=20
@@ -47782,10 +47782,7 @@ s=s==="New"||s==="First Email Pending"}else s=!0
 return s},
 $S:13}
 A.a5_.prototype={
-$1(a){var s,r=a.z.toLowerCase()==="yes"||a.at.toLowerCase()==="converted",q=!0
-if(a.as<=0)if(B.c.b4(a.x).length===0){s=a.at
-s=B.c.n(s,"Follow-Up")||s==="First Email Sent"
-q=s}return!r&&a.a0r()&&q},
+$1(a){return!(a.z.toLowerCase()==="yes"||a.at.toLowerCase()==="converted")&&a.a0r()},
 $S:13}
 A.a4I.prototype={
 $1(a){return a.z.toLowerCase()==="yes"||a.at==="Converted"},

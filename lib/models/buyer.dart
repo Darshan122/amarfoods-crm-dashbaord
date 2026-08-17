@@ -141,11 +141,67 @@ class Buyer {
     );
   }
 
+  static DateTime? parseDate(String? raw) {
+    if (raw == null) return null;
+    final str = raw.trim();
+    if (str.isEmpty || str == 'N/A' || str == '-') return null;
+
+    // Try standard ISO 8601 (yyyy-MM-dd)
+    final iso = DateTime.tryParse(str);
+    if (iso != null) {
+      return DateTime(iso.year, iso.month, iso.day);
+    }
+
+    // Try parsing dd-MM-yyyy or dd/MM/yyyy or yyyy/MM/dd
+    final parts = str.split(RegExp(r'[-/.]'));
+    if (parts.length == 3) {
+      final p1 = int.tryParse(parts[0]);
+      final p2 = int.tryParse(parts[1]);
+      final p3 = int.tryParse(parts[2]);
+
+      if (p1 != null && p2 != null && p3 != null) {
+        if (p3 > 1000) {
+          return DateTime(p3, p2, p1);
+        } else if (p1 > 1000) {
+          return DateTime(p1, p2, p3);
+        }
+      }
+    }
+
+    for (var fmt in ['dd-MM-yyyy', 'dd/MM/yyyy', 'dd-MMM-yyyy', 'yyyy-MM-dd']) {
+      try {
+        final d = DateFormat(fmt).parseStrict(str);
+        return DateTime(d.year, d.month, d.day);
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
   bool isDueToday() {
-    if (clientReply.toLowerCase() == 'yes' || clientReply.toLowerCase() == 'hold') return false;
-    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final reply = clientReply.toLowerCase();
+    if (reply == 'yes' || reply == 'hold' || reply == 'converted') return false;
     if (nextDueDate.isEmpty) return true;
-    return nextDueDate.compareTo(todayStr) <= 0;
+
+    final dueDate = parseDate(nextDueDate);
+    if (dueDate == null) return true;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return !dueDate.isAfter(today);
+  }
+
+  bool isOverdue() {
+    final reply = clientReply.toLowerCase();
+    if (reply == 'yes' || reply == 'hold' || reply == 'converted') return false;
+    if (nextDueDate.isEmpty) return false;
+
+    final dueDate = parseDate(nextDueDate);
+    if (dueDate == null) return false;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return dueDate.isBefore(today);
   }
 
   String suggestNextEmailType() {

@@ -169,25 +169,32 @@ class BuyerProvider extends ChangeNotifier {
       _filteredCache.add(b);
 
       // Category logic for Daily Work Area
-      bool isConverted = b.clientReply.toLowerCase() == 'yes' || b.clientReply.toLowerCase() == 'hold';
-      
+      bool isConverted = b.clientReply.toLowerCase() == 'yes' ||
+          b.clientReply.toLowerCase() == 'hold' ||
+          b.status.toLowerCase() == 'converted';
+
+      bool isFollowupCandidate = b.followupCount > 0 ||
+          b.firstEmailDate.trim().isNotEmpty ||
+          b.status.contains('Follow-Up') ||
+          b.status == 'First Email Sent';
+
       if (!isConverted) {
         // 1. Overdue
-        if (b.nextDueDate.isNotEmpty && b.nextDueDate.compareTo(todayStr) < 0) {
+        if (b.isOverdue()) {
           _overdueCache.add(b);
         }
         // 2. Follow-ups Today
-        if (b.isDueToday() && b.followupCount > 0 && (b.nextDueDate.isEmpty || b.nextDueDate.compareTo(todayStr) <= 0)) {
-           _followupTodayCache.add(b);
+        if (b.isDueToday() && isFollowupCandidate) {
+          _followupTodayCache.add(b);
         }
-        // 3. First Emails (Any buyer with 0 follow-ups or no first email date yet)
-        if (b.followupCount == 0 || b.firstEmailDate.isEmpty || b.status == 'New' || b.status == 'First Email Pending' || b.status == 'Contacted') {
+        // 3. First Emails
+        if (!isFollowupCandidate || b.status == 'New' || b.status == 'First Email Pending') {
           _firstEmailCache.add(b);
         }
       }
 
       // 4. All Follow-up Queue
-      if (b.followupCount > 0 || b.status.contains('Follow-Up')) {
+      if (isFollowupCandidate) {
         _allFollowupQueueCache.add(b);
       }
     }
@@ -372,10 +379,14 @@ class BuyerProvider extends ChangeNotifier {
   // Metrics
   int get totalBuyersCount => _buyers.length;
   int get maxSrNo => _buyers.isEmpty ? 0 : _buyers.map((b) => b.srNo).reduce((a, b) => a > b ? a : b);
-  int get dueTodayCount => _buyers.where((b) => b.isDueToday() && b.clientReply != 'Yes' && b.clientReply != 'Hold').length;
-  int get firstEmailCount => _buyers.where((b) => b.firstEmailDate.isEmpty || b.status == 'New' || b.status == 'First Email Pending').length;
-  int get todayFollowupCount => _buyers.where((b) => b.isDueToday() && b.followupCount > 0 && b.clientReply != 'Yes' && b.clientReply != 'Hold').length;
-  int get activeFollowupCount => _buyers.where((b) => b.followupCount > 0).length;
+  int get dueTodayCount => _buyers.where((b) => b.isDueToday() && b.clientReply.toLowerCase() != 'yes' && b.clientReply.toLowerCase() != 'hold').length;
+  int get firstEmailCount => _buyers.where((b) => (b.followupCount == 0 && b.firstEmailDate.trim().isEmpty) || b.status == 'New' || b.status == 'First Email Pending').length;
+  int get todayFollowupCount => _buyers.where((b) {
+    bool isConverted = b.clientReply.toLowerCase() == 'yes' || b.clientReply.toLowerCase() == 'hold' || b.status.toLowerCase() == 'converted';
+    bool isFollowupCandidate = b.followupCount > 0 || b.firstEmailDate.trim().isNotEmpty || b.status.contains('Follow-Up') || b.status == 'First Email Sent';
+    return !isConverted && b.isDueToday() && isFollowupCandidate;
+  }).length;
+  int get activeFollowupCount => _buyers.where((b) => b.followupCount > 0 || b.firstEmailDate.trim().isNotEmpty || b.status.contains('Follow-Up')).length;
   int get convertedCount => _buyers.where((b) => b.clientReply.toLowerCase() == 'yes' || b.status == 'Converted').length;
 
   void setSearchQuery(String query) {

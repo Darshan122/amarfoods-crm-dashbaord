@@ -74,11 +74,11 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
     if (rawDate.trim().isEmpty || rawDate == 'N/A' || rawDate == '-') {
       return 'N/A';
     }
-    try {
-      return DateFormat('dd-MMM-yyyy').format(DateTime.parse(rawDate.trim()));
-    } catch (_) {
-      return rawDate;
+    final parsed = Buyer.parseDate(rawDate);
+    if (parsed != null) {
+      return DateFormat('dd-MMM-yyyy').format(parsed);
     }
+    return rawDate;
   }
 
   // ── URL / email launchers ───────────────────────────────────────────────────
@@ -173,7 +173,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
               isFollowup: true,
               showBatchButton: true,
               batchAction: () async {
-                final targetBuyers = followupBuyers.take(5).toList();
+                final targetBuyers = followupBuyers.toList();
                 for (var b in targetBuyers) {
                   if (b.email.isNotEmpty) {
                     await UrlUtils.launchEmailComposer(
@@ -235,7 +235,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
               isFollowup: false,
               showBatchButton: true,
               batchAction: () async {
-                final targetBuyers = firstEmailBuyers.take(5).toList();
+                final targetBuyers = firstEmailBuyers.toList();
                 for (var b in targetBuyers) {
                   if (b.email.isNotEmpty) {
                     await UrlUtils.launchEmailComposer(

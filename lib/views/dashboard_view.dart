@@ -1549,7 +1549,7 @@ class _DashboardViewState extends State<DashboardView> {
 
     int countNew = buyers.where((b) => b.status == 'New').length;
     int countFirstSent = buyers.where((b) => b.status.contains('First Email')).length;
-    int countFollowupDue = buyers.where((b) => b.status == 'Follow-Up Pending' || (b.isDueToday() && b.followupCount > 0)).length;
+    int countFollowupDue = p.todayFollowupCount;
     int countFollowupSent = buyers.where((b) => b.status == 'Follow-Up Sent' || b.status.contains('Follow-Up')).length;
     int countReplied = buyers.where((b) => b.status == 'Replied' || b.clientReply.toLowerCase() == 'yes').length;
     int countInterested = buyers.where((b) => b.status == 'Interested').length;

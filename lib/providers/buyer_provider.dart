@@ -169,7 +169,6 @@ class BuyerProvider extends ChangeNotifier {
 
       // Category logic for Daily Work Area
       bool isConverted = b.clientReply.toLowerCase() == 'yes' ||
-          b.clientReply.toLowerCase() == 'hold' ||
           b.status.toLowerCase() == 'converted';
 
       bool isFollowupCandidate = b.followupCount > 0 ||
@@ -378,10 +377,10 @@ class BuyerProvider extends ChangeNotifier {
   // Metrics
   int get totalBuyersCount => _buyers.length;
   int get maxSrNo => _buyers.isEmpty ? 0 : _buyers.map((b) => b.srNo).reduce((a, b) => a > b ? a : b);
-  int get dueTodayCount => _buyers.where((b) => b.isDueToday() && b.clientReply.toLowerCase() != 'yes' && b.clientReply.toLowerCase() != 'hold').length;
+  int get dueTodayCount => _buyers.where((b) => b.isDueToday() && b.clientReply.toLowerCase() != 'yes').length;
   int get firstEmailCount => _buyers.where((b) => (b.followupCount == 0 && b.firstEmailDate.trim().isEmpty) || b.status == 'New' || b.status == 'First Email Pending').length;
   int get todayFollowupCount => _buyers.where((b) {
-    bool isConverted = b.clientReply.toLowerCase() == 'yes' || b.clientReply.toLowerCase() == 'hold' || b.status.toLowerCase() == 'converted';
+    bool isConverted = b.clientReply.toLowerCase() == 'yes' || b.status.toLowerCase() == 'converted';
     bool isFollowupCandidate = b.followupCount > 0 || b.firstEmailDate.trim().isNotEmpty || b.status.contains('Follow-Up') || b.status == 'First Email Sent';
     return !isConverted && b.isDueToday() && isFollowupCandidate;
   }).length;

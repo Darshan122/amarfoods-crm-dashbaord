@@ -180,7 +180,7 @@ class Buyer {
 
   bool isDueToday() {
     final reply = clientReply.toLowerCase();
-    if (reply == 'yes' || reply == 'hold' || reply == 'converted') return false;
+    if (reply == 'yes' || reply == 'converted') return false;
     if (nextDueDate.isEmpty) return true;
 
     final dueDate = parseDate(nextDueDate);
@@ -193,7 +193,7 @@ class Buyer {
 
   bool isOverdue() {
     final reply = clientReply.toLowerCase();
-    if (reply == 'yes' || reply == 'hold' || reply == 'converted') return false;
+    if (reply == 'yes' || reply == 'converted') return false;
     if (nextDueDate.isEmpty) return false;
 
     final dueDate = parseDate(nextDueDate);

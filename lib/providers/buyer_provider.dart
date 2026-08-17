@@ -181,8 +181,8 @@ class BuyerProvider extends ChangeNotifier {
         if (b.isOverdue()) {
           _overdueCache.add(b);
         }
-        // 2. Follow-ups Today
-        if (b.isDueToday() && isFollowupCandidate) {
+        // 2. Follow-ups Today (strictly based on Follow Up Date)
+        if (b.isDueToday()) {
           _followupTodayCache.add(b);
         }
         // 3. First Emails
@@ -381,8 +381,7 @@ class BuyerProvider extends ChangeNotifier {
   int get firstEmailCount => _buyers.where((b) => (b.followupCount == 0 && b.firstEmailDate.trim().isEmpty) || b.status == 'New' || b.status == 'First Email Pending').length;
   int get todayFollowupCount => _buyers.where((b) {
     bool isConverted = b.clientReply.toLowerCase() == 'yes' || b.status.toLowerCase() == 'converted';
-    bool isFollowupCandidate = b.followupCount > 0 || b.firstEmailDate.trim().isNotEmpty || b.status.contains('Follow-Up') || b.status == 'First Email Sent';
-    return !isConverted && b.isDueToday() && isFollowupCandidate;
+    return !isConverted && b.isDueToday();
   }).length;
   int get activeFollowupCount => _buyers.where((b) => b.followupCount > 0 || b.firstEmailDate.trim().isNotEmpty || b.status.contains('Follow-Up')).length;
   int get convertedCount => _buyers.where((b) => b.clientReply.toLowerCase() == 'yes' || b.status == 'Converted').length;

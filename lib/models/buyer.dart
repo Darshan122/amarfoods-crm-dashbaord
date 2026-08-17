@@ -181,10 +181,10 @@ class Buyer {
   bool isDueToday() {
     final reply = clientReply.toLowerCase();
     if (reply == 'yes' || reply == 'converted') return false;
-    if (nextDueDate.isEmpty) return true;
+    if (nextDueDate.trim().isEmpty) return false;
 
     final dueDate = parseDate(nextDueDate);
-    if (dueDate == null) return true;
+    if (dueDate == null) return false;
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);

@@ -142,7 +142,6 @@ class BuyerProvider extends ChangeNotifier {
   void _rebuildCaches({bool preservePage = false}) {
     int savedPage = _currentPage;
     final query = _searchQuery.trim().toLowerCase();
-    final todayStr = DateTime.now().toIso8601String().split('T')[0];
     
     _filteredCache = [];
     _overdueCache = [];

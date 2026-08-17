@@ -37,7 +37,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
   late final ScrollController _firstEmailScrollCtrl;
 
   // ── Layout constants ────────────────────────────────────────────────────────
-  static const int _rowsVisible = 5;
+  static const int _rowsVisible = 8;
   static const double _rowHeight = 68.0;
 
   @override
@@ -696,14 +696,17 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                     controller: sectionScrollCtrl,
                     thumbVisibility: true,
                     trackVisibility: true,
+                    interactive: true,
+                    thickness: 8.0,
+                    radius: const Radius.circular(4),
                     child: ListView.builder(
                       controller: sectionScrollCtrl,
-                      physics: const ClampingScrollPhysics(),
-                      itemCount: paginatedBuyers.length,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: allBuyers.length,
                       itemExtent: _rowHeight,
                       itemBuilder: (context, idx) => _buildRow(
-                        buyer: paginatedBuyers[idx],
-                        isLast: idx == paginatedBuyers.length - 1,
+                        buyer: allBuyers[idx],
+                        isLast: idx == allBuyers.length - 1,
                         isFollowup: isFollowup,
                         themeColor: themeColor,
                         borderColor: borderColor,
@@ -714,8 +717,8 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                   ),
                 ),
 
-              // ── "Showing X of Y" footer ─────────────────────────────────
-              if (count > _rowsVisible)
+              // ── "Showing X buyers" footer ─────────────────────────────────
+              if (count > 0)
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 8),
@@ -727,11 +730,11 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.expand_more_rounded,
+                      Icon(Icons.swap_vert_rounded,
                           color: themeColor, size: 16),
                       const SizedBox(width: 6),
                       Text(
-                        'Showing ${paginatedBuyers.length} of $count — scroll inside list for more',
+                        'Total $count ${isFollowup ? "follow-up" : "first email"} buyers scheduled today — scroll inside table to view all',
                         style: TextStyle(
                             color: themeColor,
                             fontSize: 11,

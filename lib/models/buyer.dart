@@ -204,9 +204,14 @@ class Buyer {
     return dueDate.isBefore(today);
   }
 
+  int get nextFollowupStep {
+    if (firstEmailDate.trim().isEmpty) return 0;
+    return followupCount + 1;
+  }
+
   String suggestNextEmailType() {
-    if (followupCount == 0 || firstEmailDate.isEmpty) return 'First Email';
-    return 'Follow-Up $followupCount';
+    if (firstEmailDate.trim().isEmpty) return 'First Email';
+    return 'Follow-Up ${followupCount + 1}';
   }
 
   String get actionButtonLabel {
@@ -216,10 +221,11 @@ class Buyer {
     if (clientReply.toLowerCase() == 'hold') {
       return 'On Hold';
     }
-    if (followupCount == 0 || firstEmailDate.isEmpty) {
+    if (firstEmailDate.trim().isEmpty) {
       return 'Send First Email';
     }
-    return 'Send Follow-Up $followupCount';
+    final nextStep = followupCount + 1;
+    return 'Send Follow-Up $nextStep';
   }
 
   static String calculateNextDueDate([DateTime? fromDate]) {

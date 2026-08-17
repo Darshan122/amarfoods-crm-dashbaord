@@ -180,7 +180,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                       email: b.email,
                       companyName: b.company,
                       isFirstEmail: false,
-                      followupCount: b.followupCount,
+                      followupCount: b.nextFollowupStep,
                       context: context,
                     );
                   }

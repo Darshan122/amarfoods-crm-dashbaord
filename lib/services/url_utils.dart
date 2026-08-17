@@ -369,8 +369,8 @@ class UrlUtils {
       await launchEmailComposer(
         email: buyer.email,
         companyName: buyer.company,
-        isFirstEmail: buyer.firstEmailDate.isEmpty,
-        followupCount: buyer.followupCount,
+        isFirstEmail: buyer.firstEmailDate.trim().isEmpty,
+        followupCount: buyer.nextFollowupStep,
         context: context,
       );
     }

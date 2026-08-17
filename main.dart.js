@@ -47423,7 +47423,7 @@ return this.Br(s,s,s,s,a,s,s,s,s,b,s,s)},
 YL(a){var s=null
 return this.Br(a,s,s,s,s,s,s,s,s,s,s,s)},
 a0r(){var s,r,q,p=this.z.toLowerCase()
-if(p==="yes"||p==="hold"||p==="converted")return!1
+if(p==="yes"||p==="converted")return!1
 s=this.y
 if(s.length===0)return!0
 r=A.aFo(s)
@@ -47431,7 +47431,7 @@ if(r==null)return!0
 q=new A.ck(Date.now(),0,!1)
 return!r.tf(A.c3(A.bi(q),A.bk(q),A.ci(q),0,0,0,0))},
 ax0(){var s,r,q,p=this.z.toLowerCase()
-if(p==="yes"||p==="hold"||p==="converted")return!1
+if(p==="yes"||p==="converted")return!1
 s=this.y
 if(s.length===0)return!1
 r=A.aFo(s)
@@ -47577,8 +47577,7 @@ q=p}}if(!q)continue
 p=m.f
 if(p!=="All Replies"&&p!=="All")if(r.z!==p)continue
 m.z.push(r)
-p=r.z
-o=p.toLowerCase()==="yes"||p.toLowerCase()==="hold"||r.at.toLowerCase()==="converted"
+o=r.z.toLowerCase()==="yes"||r.at.toLowerCase()==="converted"
 n=!0
 if(r.as<=0)if(B.c.b4(r.x).length===0){p=r.at
 p=A.q1(p,"Follow-Up",0)||p==="First Email Sent"
@@ -47783,7 +47782,7 @@ s=s==="New"||s==="First Email Pending"}else s=!0
 return s},
 $S:13}
 A.a5_.prototype={
-$1(a){var s=a.z,r=s.toLowerCase()==="yes"||s.toLowerCase()==="hold"||a.at.toLowerCase()==="converted",q=!0
+$1(a){var s,r=a.z.toLowerCase()==="yes"||a.at.toLowerCase()==="converted",q=!0
 if(a.as<=0)if(B.c.b4(a.x).length===0){s=a.at
 s=B.c.n(s,"Follow-Up")||s==="First Email Sent"
 q=s}return!r&&a.a0r()&&q},

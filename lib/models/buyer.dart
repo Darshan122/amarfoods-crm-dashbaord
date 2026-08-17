@@ -218,9 +218,6 @@ class Buyer {
     if (clientReply.toLowerCase() == 'yes' || status.toLowerCase() == 'converted') {
       return 'Converted';
     }
-    if (clientReply.toLowerCase() == 'hold') {
-      return 'On Hold';
-    }
     if (firstEmailDate.trim().isEmpty) {
       return 'Send First Email';
     }

@@ -545,8 +545,6 @@ class _DashboardViewState extends State<DashboardView> {
                           SizedBox(width: 10),
                           Expanded(flex: 3, child: Text('FOLLOW-UP TRACK', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w800, fontSize: 11))),
                           SizedBox(width: 10),
-                          Expanded(flex: 2, child: Text('NEXT ACTION', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w800, fontSize: 11))),
-                          SizedBox(width: 10),
                           Expanded(flex: 2, child: Text('NOTES', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w800, fontSize: 11))),
                           SizedBox(width: 10),
                           SizedBox(width: 70, child: Text('ACTIONS', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w800, fontSize: 11))),
@@ -1008,28 +1006,6 @@ class _DashboardViewState extends State<DashboardView> {
                   ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(width: 10),
-
-          // NEXT ACTION badge
-          Expanded(
-            flex: 2,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0F2FE),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                b.actionButtonLabel,
-                style: const TextStyle(
-                    color: Color(0xFF0369A1),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
             ),
           ),
           const SizedBox(width: 10),

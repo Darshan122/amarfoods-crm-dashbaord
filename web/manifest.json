@@ -1,11 +1,11 @@
 {
-    "name": "buyer_crm_app",
-    "short_name": "buyer_crm_app",
+    "name": "Amar Foods - Buyer CRM Dashboard",
+    "short_name": "Amar Foods CRM",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#8B2C69",
+    "description": "Amar Foods Dehydrated Onion & Garlic Importer Follow-Up Dashboard",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

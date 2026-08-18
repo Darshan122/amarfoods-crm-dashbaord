@@ -445,13 +445,15 @@ class BuyerProvider extends ChangeNotifier {
     final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final nextDueStr = Buyer.calculateNextDueDate(DateTime.now());
 
-    final updatedCount = existing.followupCount + 1;
+    final bool isInitialEmail = existing.firstEmailDate.trim().isEmpty;
+    final int updatedCount = isInitialEmail ? 0 : existing.followupCount + 1;
+
     final updated = existing.copyWith(
-      firstEmailDate: existing.firstEmailDate.isEmpty ? todayStr : existing.firstEmailDate,
+      firstEmailDate: isInitialEmail ? todayStr : existing.firstEmailDate,
       lastEmailDate: todayStr,
       nextDueDate: nextDueStr,
       followupCount: updatedCount,
-      status: 'Follow-Up $updatedCount Sent',
+      status: isInitialEmail ? 'First Email Sent' : 'Follow-Up $updatedCount Sent',
     );
 
     _buyers[index] = updated;

@@ -734,7 +734,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                           color: themeColor, size: 16),
                       const SizedBox(width: 6),
                       Text(
-                        'Total $count ${isFollowup ? "follow-up" : "first email"} buyers scheduled today — scroll inside table to view all',
+                        'Total $count ${title.toLowerCase()} buyers — scroll inside table to view all',
                         style: TextStyle(
                             color: themeColor,
                             fontSize: 11,
@@ -768,6 +768,14 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
         .where((e) => e.isNotEmpty)
         .toList();
 
+    final bool isBuyerFollowup = buyer.firstEmailDate.trim().isNotEmpty || buyer.followupCount > 0;
+    final String badgeText = isBuyerFollowup
+        ? 'FOLLOW-UP #${buyer.nextFollowupStep}'
+        : 'FIRST EMAIL';
+    final IconData badgeIcon = isBuyerFollowup
+        ? Icons.access_time_rounded
+        : Icons.email_outlined;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -796,16 +804,14 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    isFollowup
-                        ? Icons.access_time_rounded
-                        : Icons.email_outlined,
+                    badgeIcon,
                     size: 12,
                     color: themeColor,
                   ),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
-                      isFollowup ? 'FOLLOW-UP' : 'FIRST EMAIL',
+                      badgeText,
                       style: TextStyle(
                           color: themeColor,
                           fontWeight: FontWeight.bold,

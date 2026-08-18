@@ -177,16 +177,17 @@ class BuyerProvider extends ChangeNotifier {
           b.status == 'First Email Sent';
 
       if (!isConverted) {
-        // 1. Overdue
-        if (b.isOverdue()) {
-          _overdueCache.add(b);
-        }
-        // 2. Follow-ups Today (strictly based on Follow Up Date)
-        if (b.isDueToday()) {
-          _followupTodayCache.add(b);
-        }
-        // 3. First Emails
-        if (!isFollowupCandidate || b.status == 'New' || b.status == 'First Email Pending') {
+        if (isFollowupCandidate) {
+          // 1. Overdue Follow-ups (only for buyers who already received First Email)
+          if (b.isOverdue()) {
+            _overdueCache.add(b);
+          }
+          // 2. Follow-ups Today
+          if (b.isDueToday()) {
+            _followupTodayCache.add(b);
+          }
+        } else {
+          // 3. First Emails (Initial outreach only)
           _firstEmailCache.add(b);
         }
       }

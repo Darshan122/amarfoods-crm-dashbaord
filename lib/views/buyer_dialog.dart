@@ -500,8 +500,18 @@ class _BuyerDialogState extends State<BuyerDialog> {
     if (!isEditing) {
       Buyer? duplicate;
       for (var b in widget.existingBuyers) {
-        bool companyMatch = companyName.isNotEmpty && companyName.toLowerCase() == b.company.trim().toLowerCase();
-        bool emailMatch = emailStr.isNotEmpty && b.email.toLowerCase().split(RegExp(r'[,;/]\s*')).contains(emailStr.toLowerCase());
+        bool isRealEmail = emailStr.isNotEmpty &&
+            emailStr != '-' &&
+            emailStr.toLowerCase() != 'n/a' &&
+            emailStr.contains('@');
+        bool isRealCompany = companyName.isNotEmpty &&
+            companyName != '-' &&
+            companyName.toLowerCase() != 'n/a' &&
+            !companyName.toLowerCase().startsWith('importer #');
+
+        bool companyMatch = isRealCompany && companyName.toLowerCase() == b.company.trim().toLowerCase();
+        bool emailMatch = isRealEmail && b.email.toLowerCase().split(RegExp(r'[,;/]\s*')).where((e) => e.contains('@')).contains(emailStr.toLowerCase());
+
         if (companyMatch || emailMatch) {
           duplicate = b;
           break;

@@ -1323,7 +1323,7 @@ class _DashboardViewState extends State<DashboardView> {
               onChanged: p.setSearchQuery,
               style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
               decoration: InputDecoration(
-                hintText: 'Search by Company Name, Email, or Phone...',
+                hintText: 'Search by Company, Website URL, Email, Phone, or Notes...',
                 hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
                 filled: true,

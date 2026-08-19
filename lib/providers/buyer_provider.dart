@@ -142,6 +142,12 @@ class BuyerProvider extends ChangeNotifier {
   void _rebuildCaches({bool preservePage = false}) {
     int savedPage = _currentPage;
     final query = _searchQuery.trim().toLowerCase();
+    final cleanQuery = query
+        .replaceAll('https://', '')
+        .replaceAll('http://', '')
+        .replaceAll('www.', '')
+        .replaceAll(RegExp(r'/+$'), '')
+        .trim();
     
     _filteredCache = [];
     _overdueCache = [];
@@ -150,10 +156,31 @@ class BuyerProvider extends ChangeNotifier {
     _allFollowupQueueCache = [];
 
     for (var b in _buyers) {
+      final cleanWeb = b.website
+          .toLowerCase()
+          .replaceAll('https://', '')
+          .replaceAll('http://', '')
+          .replaceAll('www.', '')
+          .replaceAll(RegExp(r'/+$'), '')
+          .trim();
+      final cleanCompany = b.company.toLowerCase();
+      final cleanEmail = b.email.toLowerCase();
+      final cleanId = b.id.toLowerCase();
+      final cleanPhone = b.phone.toLowerCase();
+      final cleanNotes = b.notes.toLowerCase();
+      final srNoStr = b.srNo.toString();
+
       bool matchesSearch = query.isEmpty ||
-          b.company.toLowerCase().contains(query) ||
-          b.email.toLowerCase().contains(query) ||
-          b.id.toLowerCase().contains(query);
+          cleanCompany.contains(query) ||
+          (cleanQuery.isNotEmpty && cleanCompany.contains(cleanQuery)) ||
+          cleanEmail.contains(query) ||
+          b.website.toLowerCase().contains(query) ||
+          (cleanQuery.isNotEmpty && cleanWeb.contains(cleanQuery)) ||
+          (cleanQuery.isNotEmpty && cleanWeb.isNotEmpty && cleanQuery.contains(cleanWeb)) ||
+          cleanId.contains(query) ||
+          srNoStr == query ||
+          cleanPhone.contains(query) ||
+          cleanNotes.contains(query);
 
       if (!matchesSearch) continue;
 

@@ -453,7 +453,7 @@ class UrlUtils {
     if (confirmed != true) return;
 
     // 3. Perform Mark as Sent
-    await provider.markEmailSent(buyer.id);
+    await provider.markEmailSent(buyer.id, targetBuyer: buyer);
 
     if (!context.mounted) return;
 

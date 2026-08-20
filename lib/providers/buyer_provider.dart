@@ -205,12 +205,11 @@ class BuyerProvider extends ChangeNotifier {
 
       if (!isConverted) {
         if (isFollowupCandidate) {
-          // 1. Overdue Follow-ups (only for buyers who already received First Email)
+          // 1. Overdue Follow-ups (strictly past due)
           if (b.isOverdue()) {
             _overdueCache.add(b);
-          }
-          // 2. Follow-ups Today
-          if (b.isDueToday()) {
+          } else if (b.isDueToday()) {
+            // 2. Follow-ups Today (scheduled for today)
             _followupTodayCache.add(b);
           }
         } else {
@@ -465,8 +464,19 @@ class BuyerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> markEmailSent(String buyerId) async {
-    final index = _buyers.indexWhere((b) => b.id == buyerId);
+  Future<bool> markEmailSent(String buyerId, {Buyer? targetBuyer}) async {
+    int index = _buyers.indexWhere((b) => b.id == buyerId);
+    if (index < 0 && targetBuyer != null) {
+      if (targetBuyer.srNo > 0) {
+        index = _buyers.indexWhere((b) => b.srNo == targetBuyer.srNo);
+      }
+      if (index < 0 && targetBuyer.company.trim().isNotEmpty) {
+        index = _buyers.indexWhere((b) => b.company.trim().toLowerCase() == targetBuyer.company.trim().toLowerCase());
+      }
+      if (index < 0 && targetBuyer.email.trim().isNotEmpty && targetBuyer.email.contains('@')) {
+        index = _buyers.indexWhere((b) => b.email.trim().toLowerCase() == targetBuyer.email.trim().toLowerCase());
+      }
+    }
     if (index < 0) return false;
 
     final existing = _buyers[index];
@@ -515,10 +525,14 @@ class BuyerProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    int updatedCount = await _apiService.batchMarkSent(_selectedBuyerIds.toList(), sendEmail: sendGmail);
+    for (var id in _selectedBuyerIds.toList()) {
+      await markEmailSent(id);
+    }
     _selectedBuyerIds.clear();
-    await loadBuyers();
-    return updatedCount > 0;
+    _isLoading = false;
+    _rebuildCaches(preservePage: true);
+    notifyListeners();
+    return true;
   }
 
   Future<bool> batchProcessSelectedCustom(List<String> ids, {bool sendGmail = false}) async {
@@ -527,9 +541,13 @@ class BuyerProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    int updatedCount = await _apiService.batchMarkSent(ids, sendEmail: sendGmail);
-    await loadBuyers();
-    return updatedCount > 0;
+    for (var id in ids) {
+      await markEmailSent(id);
+    }
+    _isLoading = false;
+    _rebuildCaches(preservePage: true);
+    notifyListeners();
+    return true;
   }
 
   Future<bool> saveBuyer(Buyer buyer) async {

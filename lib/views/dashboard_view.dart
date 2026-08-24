@@ -112,6 +112,11 @@ class _DashboardViewState extends State<DashboardView> {
             _buildVibrantExecutiveHeader(context, p),
 
             // ------------------------------------------------------------------
+            // 1.1 MARKET SEGMENT SELECTOR (International vs Domestic)
+            // ------------------------------------------------------------------
+            _buildMarketSegmentBar(p),
+
+            // ------------------------------------------------------------------
             // 2. MAIN CONTENT AREA (Switches between Daily Work Area, All Importers, & Analytics)
             // ------------------------------------------------------------------
             Expanded(
@@ -210,6 +215,7 @@ class _DashboardViewState extends State<DashboardView> {
                   builder: (_) => BuyerDialog(
                     nextSrNo: p.maxSrNo + 1,
                     existingBuyers: p.buyers,
+                    defaultMarket: p.marketFilter != 'All' ? p.marketFilter : 'International',
                     onSave: (newBuyer) => p.saveBuyer(newBuyer),
                   ),
                 );
@@ -355,7 +361,7 @@ class _DashboardViewState extends State<DashboardView> {
 
           const SizedBox(width: 8),
 
-          // Green + Add Buyer Button (Matching Screenshots!)
+          // Green + Add Buyer Button
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF009647),
@@ -370,6 +376,7 @@ class _DashboardViewState extends State<DashboardView> {
                 builder: (_) => BuyerDialog(
                   nextSrNo: p.maxSrNo + 1,
                   existingBuyers: p.buyers,
+                  defaultMarket: p.marketFilter != 'All' ? p.marketFilter : 'International',
                   onSave: (newBuyer) => p.saveBuyer(newBuyer),
                 ),
               );
@@ -381,6 +388,93 @@ class _DashboardViewState extends State<DashboardView> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMarketSegmentBar(BuyerProvider p) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            const Icon(Icons.public_rounded, size: 15, color: Color(0xFF64748B)),
+            const SizedBox(width: 6),
+            const Text(
+              'MARKET:',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF475569),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(width: 12),
+            _buildMarketPill(
+              label: 'All (${p.buyers.length})',
+              isSelected: p.marketFilter == 'All',
+              onTap: () => p.setMarketFilter('All'),
+            ),
+            const SizedBox(width: 8),
+            _buildMarketPill(
+              label: '🌍 International (${p.internationalCount})',
+              isSelected: p.marketFilter == 'International',
+              onTap: () => p.setMarketFilter('International'),
+            ),
+            const SizedBox(width: 8),
+            _buildMarketPill(
+              label: '🇮🇳 Domestic (${p.domesticCount})',
+              isSelected: p.marketFilter == 'Domestic',
+              onTap: () => p.setMarketFilter('Domestic'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMarketPill({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF8B2C69) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF8B2C69) : const Color(0xFFCBD5E1),
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF8B2C69).withValues(alpha: 0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : const Color(0xFF334155),
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
@@ -798,14 +892,40 @@ class _DashboardViewState extends State<DashboardView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  b.company,
-                  style: const TextStyle(
-                      color: Color(0xFF8B2C69),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        b.company,
+                        style: const TextStyle(
+                            color: Color(0xFF8B2C69),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: b.marketType.toLowerCase() == 'domestic'
+                            ? const Color(0xFFEA580C).withValues(alpha: 0.1)
+                            : const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        b.marketType.toLowerCase() == 'domestic' ? '🇮🇳 Dom' : '🌍 Intl',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: b.marketType.toLowerCase() == 'domestic'
+                              ? const Color(0xFFEA580C)
+                              : const Color(0xFF2563EB),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 if (b.website.isNotEmpty && b.website != 'N/A')
                   InkWell(

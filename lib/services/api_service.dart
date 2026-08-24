@@ -203,6 +203,17 @@ class ApiService {
         status = 'First Email Sent';
       }
 
+      String marketType = 'International';
+      if (row.length > offset + 10) {
+        for (int c = offset + 10; c < row.length; c++) {
+          final val = row[c].replaceAll('"', '').trim();
+          if (val.toLowerCase() == 'domestic' || val.toLowerCase() == 'dom') {
+            marketType = 'Domestic';
+            break;
+          }
+        }
+      }
+
       list.add(Buyer(
         id: Buyer.formatBuyerId(srNo > 0 ? srNo : counter),
         srNo: srNo > 0 ? srNo : counter,
@@ -220,6 +231,7 @@ class ApiService {
         status: status,
         nextAction: 'Follow-Up',
         followupCount: 0,
+        marketType: marketType,
       ));
 
       counter++;

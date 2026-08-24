@@ -16,6 +16,7 @@ class BuyerProvider extends ChangeNotifier {
   String _searchQuery = '';
   String _statusFilter = 'All Statuses';
   String _replyFilter = 'All Replies';
+  String _marketFilter = 'All'; // 'All', 'International', 'Domestic'
   MainTab _activeTab = MainTab.allImporters;
 
   final Set<String> _selectedBuyerIds = {};
@@ -50,6 +51,7 @@ class BuyerProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
   String get statusFilter => _statusFilter;
   String get replyFilter => _replyFilter;
+  String get marketFilter => _marketFilter;
   MainTab get activeTab => _activeTab;
   int get displayedCount => _displayedCount;
   Set<String> get selectedBuyerIds => _selectedBuyerIds;
@@ -189,6 +191,9 @@ class BuyerProvider extends ChangeNotifier {
       }
       if (_replyFilter != 'All Replies' && _replyFilter != 'All') {
         if (b.clientReply != _replyFilter) continue;
+      }
+      if (_marketFilter != 'All') {
+        if (b.marketType.toLowerCase() != _marketFilter.toLowerCase()) continue;
       }
 
       // Use actual srNo from Google Sheet — do NOT re-number
@@ -412,6 +417,8 @@ class BuyerProvider extends ChangeNotifier {
   }).length;
   int get activeFollowupCount => _buyers.where((b) => b.followupCount > 0 || b.firstEmailDate.trim().isNotEmpty || b.status.contains('Follow-Up')).length;
   int get convertedCount => _buyers.where((b) => b.clientReply.toLowerCase() == 'yes' || b.status == 'Converted').length;
+  int get internationalCount => _buyers.where((b) => b.marketType.toLowerCase() == 'international').length;
+  int get domesticCount => _buyers.where((b) => b.marketType.toLowerCase() == 'domestic').length;
 
   void setSearchQuery(String query) {
     _searchDebounce?.cancel();
@@ -432,6 +439,13 @@ class BuyerProvider extends ChangeNotifier {
   void setReplyFilter(String filter) {
     if (_replyFilter == filter) return;
     _replyFilter = filter;
+    _rebuildCaches();
+    notifyListeners();
+  }
+
+  void setMarketFilter(String market) {
+    if (_marketFilter == market) return;
+    _marketFilter = market;
     _rebuildCaches();
     notifyListeners();
   }

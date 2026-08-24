@@ -18,6 +18,7 @@ class Buyer {
   final String status; // Col 13: Current Status
   final String nextAction; // Col 14: Next Action
   final String notes; // Col 15: Notes
+  final String marketType; // 'International' or 'Domestic'
 
   Buyer({
     required this.id,
@@ -36,6 +37,7 @@ class Buyer {
     required this.status,
     this.nextAction = 'Follow-Up',
     required this.notes,
+    this.marketType = 'International',
   });
 
   static String formatBuyerId(int number) {
@@ -62,6 +64,19 @@ class Buyer {
       }
     }
 
+    String rawMarket = 'International';
+    for (var k in ['Market Type', 'MarketType', 'market_type', 'Market', 'market', 'Region', 'region']) {
+      if (json[k] != null && json[k].toString().trim().isNotEmpty) {
+        final val = json[k].toString().trim();
+        if (val.toLowerCase().contains('dom')) {
+          rawMarket = 'Domestic';
+        } else {
+          rawMarket = 'International';
+        }
+        break;
+      }
+    }
+
     return Buyer(
       id: formattedId,
       srNo: int.tryParse(json['SR_NO']?.toString() ?? '') ?? index,
@@ -79,6 +94,7 @@ class Buyer {
       status: json['CurrentStatus']?.toString() ?? json['Current Status']?.toString() ?? json['Status']?.toString() ?? 'New',
       nextAction: json['NextAction']?.toString() ?? json['Next Action']?.toString() ?? 'Follow-Up',
       notes: json['Notes']?.toString() ?? '',
+      marketType: rawMarket,
     );
   }
 
@@ -100,6 +116,7 @@ class Buyer {
       'Current Status': status,
       'Next Action': nextAction,
       'Notes': notes,
+      'Market Type': marketType,
     };
   }
 
@@ -120,6 +137,7 @@ class Buyer {
     String? status,
     String? nextAction,
     String? notes,
+    String? marketType,
   }) {
     return Buyer(
       id: id ?? this.id,
@@ -138,6 +156,7 @@ class Buyer {
       status: status ?? this.status,
       nextAction: nextAction ?? this.nextAction,
       notes: notes ?? this.notes,
+      marketType: marketType ?? this.marketType,
     );
   }
 

@@ -6,6 +6,7 @@ class BuyerDialog extends StatefulWidget {
   final Buyer? buyer;
   final int nextSrNo;
   final List<Buyer> existingBuyers;
+  final String? defaultMarket;
   final Function(Buyer buyer) onSave;
 
   const BuyerDialog({
@@ -13,6 +14,7 @@ class BuyerDialog extends StatefulWidget {
     this.buyer,
     this.nextSrNo = 1,
     this.existingBuyers = const [],
+    this.defaultMarket,
     required this.onSave,
   });
 
@@ -33,10 +35,12 @@ class _BuyerDialogState extends State<BuyerDialog> {
   String _connectionType = 'Email';
   String _status = 'New';
   String _clientReply = 'Pending';
+  String _marketType = 'International';
 
   final List<String> _connectionTypes = ['Email', 'WhatsApp', 'Viber', 'Web Form', 'Social Media'];
   final List<String> _statuses = ['New', 'Contacted', 'First Email Sent', 'Follow-Up Sent', 'Replied', 'Hold'];
   final List<String> _clientReplies = ['Pending', 'Hold', 'Yes', 'No'];
+  final List<String> _marketTypes = ['International', 'Domestic'];
 
   @override
   void initState() {
@@ -74,6 +78,9 @@ class _BuyerDialogState extends State<BuyerDialog> {
     }
     _followUpDateCtrl = TextEditingController(text: dateVal);
     _notesCtrl = TextEditingController(text: b?.notes ?? '');
+
+    final initialMarket = b?.marketType ?? widget.defaultMarket ?? 'International';
+    _marketType = initialMarket.toLowerCase().contains('dom') ? 'Domestic' : 'International';
 
     _connectionType = b?.connectionMethod.isNotEmpty == true ? b!.connectionMethod : 'Email';
     _status = b?.status.isNotEmpty == true ? b!.status : 'New';
@@ -327,9 +334,25 @@ class _BuyerDialogState extends State<BuyerDialog> {
                       ),
                       const SizedBox(height: 18),
 
-                      // ROW 3: Connection Type | Current Status
+                      // ROW 3: Market Segment | Connection Type
                       _buildFormPair(
                         isMobile,
+                        _buildLabeledField(
+                          label: 'Market Segment *',
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _marketTypes.contains(_marketType) ? _marketType : 'International',
+                            dropdownColor: Colors.white,
+                            style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+                            decoration: _inputDecoration(''),
+                            items: const [
+                              DropdownMenuItem(value: 'International', child: Text('🌍 International (Export)')),
+                              DropdownMenuItem(value: 'Domestic', child: Text('🇮🇳 Domestic (India)')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) setState(() => _marketType = val);
+                            },
+                          ),
+                        ),
                         _buildLabeledField(
                           label: 'Connection Type',
                           child: DropdownButtonFormField<String>(
@@ -345,6 +368,12 @@ class _BuyerDialogState extends State<BuyerDialog> {
                             },
                           ),
                         ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // ROW 4: Current Status | Client Reply
+                      _buildFormPair(
+                        isMobile,
                         _buildLabeledField(
                           label: 'Current Status *',
                           child: DropdownButtonFormField<String>(
@@ -360,12 +389,6 @@ class _BuyerDialogState extends State<BuyerDialog> {
                             },
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 18),
-
-                      // ROW 4: Client Reply | Next Follow-Up Date
-                      _buildFormPair(
-                        isMobile,
                         _buildLabeledField(
                           label: 'Client Reply',
                           child: DropdownButtonFormField<String>(
@@ -381,25 +404,28 @@ class _BuyerDialogState extends State<BuyerDialog> {
                             },
                           ),
                         ),
-                        _buildLabeledField(
-                          label: 'Next Follow-Up Date',
-                          child: TextFormField(
-                            controller: _followUpDateCtrl,
-                            readOnly: true,
-                            onTap: _selectDate,
-                            style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
-                            decoration: _inputDecoration('dd-MM-yyyy').copyWith(
-                              suffixIcon: IconButton(
-                                icon: const Icon(Icons.calendar_today_outlined, color: Color(0xFF64748B), size: 18),
-                                onPressed: _selectDate,
-                              ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // ROW 5: Next Follow-Up Date
+                      _buildLabeledField(
+                        label: 'Next Follow-Up Date',
+                        child: TextFormField(
+                          controller: _followUpDateCtrl,
+                          readOnly: true,
+                          onTap: _selectDate,
+                          style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+                          decoration: _inputDecoration('dd-MM-yyyy').copyWith(
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.calendar_today_outlined, color: Color(0xFF64748B), size: 18),
+                              onPressed: _selectDate,
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 18),
 
-                      // ROW 5: Buyer Notes & Specifications
+                      // ROW 6: Buyer Notes & Specifications
                       _buildLabeledField(
                         label: 'Buyer Notes & Specifications',
                         child: TextFormField(
@@ -415,39 +441,39 @@ class _BuyerDialogState extends State<BuyerDialog> {
               ),
             ),
 
-            // Footer Bar matching Screenshot 3!
+            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+
+            // Action Buttons
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-              ),
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: 14),
+              color: const Color(0xFFF8FAFC),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF334155),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      side: const BorderSide(color: Color(0xFFCBD5E1)),
-                    ),
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF64748B),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 12),
-                  ElevatedButton(
+                  ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF009647),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      elevation: 0,
+                      elevation: 2,
                     ),
-                    onPressed: () => _handleSave(context),
-                    child: Text(
-                      isEditing ? 'Save Importer' : 'Save Importer',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    onPressed: _saveForm,
+                    icon: const Icon(Icons.check_rounded, size: 18),
+                    label: Text(
+                      isEditing ? 'Save Changes' : 'Create Importer Lead',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -460,7 +486,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
   );
 }
 
-  void _handleSave(BuildContext context) {
+  void _saveForm() {
     if (!_formKey.currentState!.validate()) return;
 
     String standardDate = _followUpDateCtrl.text.trim();
@@ -493,6 +519,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
       status: _status,
       nextAction: widget.buyer?.nextAction ?? 'Follow-Up',
       notes: _notesCtrl.text.trim(),
+      marketType: _marketType,
     );
 
     bool isEditing = widget.buyer != null;

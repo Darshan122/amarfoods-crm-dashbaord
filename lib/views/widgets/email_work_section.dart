@@ -832,14 +832,40 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  buyer.company,
-                  style: const TextStyle(
-                      color: Color(0xFF0F172A),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        buyer.company,
+                        style: const TextStyle(
+                            color: Color(0xFF0F172A),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: buyer.marketType.toLowerCase() == 'domestic'
+                            ? const Color(0xFFEA580C).withValues(alpha: 0.1)
+                            : const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        buyer.marketType.toLowerCase() == 'domestic' ? '🇮🇳 Dom' : '🌍 Intl',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: buyer.marketType.toLowerCase() == 'domestic'
+                              ? const Color(0xFFEA580C)
+                              : const Color(0xFF2563EB),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 if (buyer.website.isNotEmpty && buyer.website != 'N/A')
                   InkWell(

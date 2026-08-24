@@ -977,7 +977,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
             SizedBox(
               width: 80,
               child: Text(
-                '#${buyer.followupCount}',
+                '#${buyer.nextFollowupStep}',
                 style: const TextStyle(
                     color: Color(0xFF0F172A),
                     fontWeight: FontWeight.bold,

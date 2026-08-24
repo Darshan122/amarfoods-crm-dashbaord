@@ -219,7 +219,7 @@ class ApiService {
         notes: '',
         status: status,
         nextAction: 'Follow-Up',
-        followupCount: firstEmailDate.isNotEmpty ? 1 : 0,
+        followupCount: 0,
       ));
 
       counter++;

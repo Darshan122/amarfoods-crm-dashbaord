@@ -206,12 +206,18 @@ class Buyer {
 
   int get nextFollowupStep {
     if (firstEmailDate.trim().isEmpty) return 0;
+    if (status == 'First Email Sent' ||
+        lastEmailDate.trim().isEmpty ||
+        lastEmailDate.trim() == firstEmailDate.trim() ||
+        followupCount <= 0) {
+      return 1;
+    }
     return followupCount + 1;
   }
 
   String suggestNextEmailType() {
     if (firstEmailDate.trim().isEmpty) return 'First Email';
-    return 'Follow-Up ${followupCount + 1}';
+    return 'Follow-Up $nextFollowupStep';
   }
 
   String get actionButtonLabel {
@@ -221,8 +227,7 @@ class Buyer {
     if (firstEmailDate.trim().isEmpty) {
       return 'Send First Email';
     }
-    final nextStep = followupCount + 1;
-    return 'Send Follow-Up $nextStep';
+    return 'Send Follow-Up $nextFollowupStep';
   }
 
   static String calculateNextDueDate([DateTime? fromDate]) {

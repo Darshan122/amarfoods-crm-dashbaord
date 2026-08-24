@@ -225,13 +225,33 @@ class Buyer {
 
   int get nextFollowupStep {
     if (firstEmailDate.trim().isEmpty) return 0;
-    if (status == 'First Email Sent' ||
-        lastEmailDate.trim().isEmpty ||
-        lastEmailDate.trim() == firstEmailDate.trim() ||
-        followupCount <= 0) {
-      return 1;
+
+    int manualStep = followupCount > 0 ? followupCount + 1 : 0;
+
+    // Calculate dynamic step based on scheduled date timeline from Connection Date
+    int dateStep = 1;
+    final targetDate = parseDate(nextDueDate);
+    final conn = parseDate(connectionDate);
+    final firstMail = parseDate(firstEmailDate);
+
+    if (targetDate != null && conn != null) {
+      final diffDays = targetDate.difference(conn).inDays;
+      if (diffDays > 10) {
+        dateStep = (diffDays / 7).round();
+      } else {
+        dateStep = 1;
+      }
+    } else if (targetDate != null && firstMail != null) {
+      final diffDays = targetDate.difference(firstMail).inDays;
+      if (diffDays > 10) {
+        dateStep = ((diffDays + 7) / 7).round();
+      } else {
+        dateStep = 1;
+      }
     }
-    return followupCount + 1;
+
+    if (manualStep > dateStep) return manualStep;
+    return dateStep >= 1 ? dateStep : 1;
   }
 
   String suggestNextEmailType() {

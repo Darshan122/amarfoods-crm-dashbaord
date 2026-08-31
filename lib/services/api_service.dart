@@ -507,6 +507,9 @@ class ApiService {
           getUrl,
           js.JsObject.jsify({'method': 'GET', 'mode': 'no-cors'})
         ]);
+        final img = js.context['document'].callMethod('createElement', ['img']);
+        img['src'] = getUrl;
+        debugPrint('ApiService: Sent updateExpo to Google Sheet via Web fetch + img beacon');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web saveExpoOnSheet error: $e');
@@ -535,6 +538,9 @@ class ApiService {
           getUrl,
           js.JsObject.jsify({'method': 'GET', 'mode': 'no-cors'})
         ]);
+        final img = js.context['document'].callMethod('createElement', ['img']);
+        img['src'] = getUrl;
+        debugPrint('ApiService: Sent deleteExpo to Google Sheet via Web fetch + img beacon');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web deleteExpoFromSheet error: $e');

@@ -17,6 +17,9 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  final TextEditingController _contactSearchController = TextEditingController();
+  String _contactSearchQuery = '';
+
   void _copyToClipboard(BuildContext context, String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).clearSnackBars();
@@ -47,6 +50,7 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
   @override
   void dispose() {
     _searchController.dispose();
+    _contactSearchController.dispose();
     super.dispose();
   }
 
@@ -370,6 +374,22 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
   Widget _buildExpoDetailView(BuildContext context, BuyerProvider p, ExpoItem expo) {
     final isMobile = MediaQuery.of(context).size.width < 768;
 
+    final filteredContacts = expo.contacts.where((c) {
+      if (_contactSearchQuery.isEmpty) return true;
+      final q = _contactSearchQuery.toLowerCase();
+      return c.companyName.toLowerCase().contains(q) ||
+          c.personName.toLowerCase().contains(q) ||
+          c.personPosition.toLowerCase().contains(q) ||
+          c.companyDetails.toLowerCase().contains(q) ||
+          c.companyWebsite.toLowerCase().contains(q) ||
+          c.city.toLowerCase().contains(q) ||
+          c.country.toLowerCase().contains(q) ||
+          c.address.toLowerCase().contains(q) ||
+          c.venueAddress.toLowerCase().contains(q) ||
+          c.emails.any((e) => e.toLowerCase().contains(q)) ||
+          c.phoneNumbers.any((ph) => ph.toLowerCase().contains(q));
+    }).toList();
+
     return Column(
       children: [
         // Detail Header Bar
@@ -385,7 +405,11 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
               Row(
                 children: [
                   OutlinedButton.icon(
-                    onPressed: () => p.selectExpo(null),
+                    onPressed: () {
+                      _contactSearchController.clear();
+                      _contactSearchQuery = '';
+                      p.selectExpo(null);
+                    },
                     icon: const Icon(Icons.arrow_back_rounded, size: 18),
                     label: const Text('Back to Expos'),
                     style: OutlinedButton.styleFrom(
@@ -440,18 +464,78 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
           ),
         ),
 
+        // Contact Search Bar inside Expo Details Page
+        if (expo.contacts.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: TextField(
+              controller: _contactSearchController,
+              onChanged: (val) => setState(() => _contactSearchQuery = val.trim()),
+              decoration: InputDecoration(
+                hintText: 'Search company, contact person, email, phone, city, country or notes in ${expo.name}...',
+                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B)),
+                suffixIcon: _contactSearchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: () {
+                          _contactSearchController.clear();
+                          setState(() => _contactSearchQuery = '');
+                        },
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                ),
+              ),
+            ),
+          ),
+
         // Detail Content: Contact Cards List or Blank Canvas State
         Expanded(
           child: expo.contacts.isEmpty
               ? _buildBlankExpoPage(context, p, expo)
-              : ListView.builder(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: expo.contacts.length,
-                  itemBuilder: (context, index) {
-                    final contact = expo.contacts[index];
-                    return _buildContactCard(context, p, expo.id, contact);
-                  },
-                ),
+              : filteredContacts.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.search_off_rounded, size: 48, color: Color(0xFF94A3B8)),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No contacts found matching "$_contactSearchQuery"',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton.icon(
+                              onPressed: () {
+                                _contactSearchController.clear();
+                                setState(() => _contactSearchQuery = '');
+                              },
+                              icon: const Icon(Icons.clear_rounded, size: 16),
+                              label: const Text('Clear Search'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      itemCount: filteredContacts.length,
+                      itemBuilder: (context, index) {
+                        final contact = filteredContacts[index];
+                        return _buildContactCard(context, p, expo.id, contact);
+                      },
+                    ),
         ),
       ],
     );

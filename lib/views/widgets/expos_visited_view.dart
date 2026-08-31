@@ -47,6 +47,43 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
     }
   }
 
+  void _exportExposToCsv(BuildContext context, BuyerProvider p) {
+    if (p.expos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No expos available to export.')),
+      );
+      return;
+    }
+
+    final StringBuffer sb = StringBuffer();
+    sb.writeln('"Expo Name","Venue","City/Place","Date","Country","Company Name","Contact Person","Position","Emails","Phone Numbers","Website","Address","City","Stall Location","Discussion Notes"');
+
+    for (var expo in p.expos) {
+      if (expo.contacts.isEmpty) {
+        sb.writeln('"${_cleanCsv(expo.name)}","${_cleanCsv(expo.venue)}","${_cleanCsv(expo.place)}","${_cleanCsv(expo.expoDate)}","${_cleanCsv(expo.country)}","","","","","","","","","",""');
+      } else {
+        for (var c in expo.contacts) {
+          sb.writeln('"${_cleanCsv(expo.name)}","${_cleanCsv(expo.venue)}","${_cleanCsv(expo.place)}","${_cleanCsv(expo.expoDate)}","${_cleanCsv(expo.country)}","${_cleanCsv(c.companyName)}","${_cleanCsv(c.personName)}","${_cleanCsv(c.personPosition)}","${_cleanCsv(c.emails.join(", "))}","${_cleanCsv(c.phoneNumbers.join(", "))}","${_cleanCsv(c.companyWebsite)}","${_cleanCsv(c.address)}","${_cleanCsv(c.city)}","${_cleanCsv(c.venueAddress)}","${_cleanCsv(c.companyDetails)}"');
+        }
+      }
+    }
+
+    final String csvText = sb.toString();
+    final Uri dataUri = Uri.dataFromString(csvText, mimeType: 'text/csv', encoding: utf8);
+    UrlUtils.launchURL(dataUri.toString());
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Exported Expos & Met Companies to CSV / Excel!'),
+        backgroundColor: Color(0xFF009647),
+      ),
+    );
+  }
+
+  String _cleanCsv(String text) {
+    return text.replaceAll('"', '""').replaceAll('\n', ' ');
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -113,6 +150,18 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                 ),
               ),
               const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: () => _exportExposToCsv(context, p),
+                icon: const Icon(Icons.file_download_outlined, size: 18),
+                label: Text(isMobile ? 'Excel' : 'Export Excel/CSV'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF009647),
+                  side: const BorderSide(color: Color(0xFF009647)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+              const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: () => _showAddEditExpoDialog(context, p),
                 icon: const Icon(Icons.add_rounded, size: 20),

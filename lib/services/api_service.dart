@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'dart:js' as js;
 import '../models/buyer.dart';
+import '../models/expo.dart';
 
 class ApiService {
   static const String defaultScriptUrl =
@@ -451,5 +452,101 @@ class ApiService {
       debugPrint('Error batch updating buyers on Google Sheet: $e');
     }
     return false;
+  }
+
+  // ------------------------------------------------------------------
+  // EXPOS GOOGLE SHEET API SYNC
+  // ------------------------------------------------------------------
+
+  Future<List<ExpoItem>> fetchExpos({String? customScriptUrl}) async {
+    final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
+        ? customScriptUrl.trim()
+        : _scriptUrl;
+
+    try {
+      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final response = await http.get(
+        Uri.parse('$targetScriptUrl?action=getExpos&_t=$timestamp'),
+      ).timeout(const Duration(seconds: 6));
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        List? exposList;
+        if (decoded is List) {
+          exposList = decoded;
+        } else if (decoded is Map<String, dynamic>) {
+          if (decoded['expos'] is List) {
+            exposList = decoded['expos'];
+          } else if (decoded['data'] is List) {
+            exposList = decoded['data'];
+          }
+        }
+
+        if (exposList != null) {
+          return exposList.map((e) => ExpoItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiService: fetchExpos exception: $e');
+    }
+    return [];
+  }
+
+  Future<bool> saveExpoOnSheet(ExpoItem expo, {String? customScriptUrl}) async {
+    final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
+        ? customScriptUrl.trim()
+        : _scriptUrl;
+
+    final String payloadJson = json.encode(expo.toJson());
+    final String base64Payload = base64Encode(utf8.encode(payloadJson));
+    final String getUrl = '$targetScriptUrl?action=updateExpo&payload=${Uri.encodeComponent(base64Payload)}';
+
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('fetch', [
+          getUrl,
+          js.JsObject.jsify({'method': 'GET', 'mode': 'no-cors'})
+        ]);
+        return true;
+      } catch (e) {
+        debugPrint('ApiService: Web saveExpoOnSheet error: $e');
+      }
+    }
+
+    try {
+      final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200 || response.statusCode == 302) return true;
+    } catch (e) {
+      debugPrint('ApiService: HTTP GET updateExpo failed: $e');
+    }
+    return true;
+  }
+
+  Future<bool> deleteExpoFromSheet(String expoId, {String? customScriptUrl}) async {
+    final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
+        ? customScriptUrl.trim()
+        : _scriptUrl;
+
+    final String getUrl = '$targetScriptUrl?action=deleteExpo&id=${Uri.encodeComponent(expoId)}';
+
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('fetch', [
+          getUrl,
+          js.JsObject.jsify({'method': 'GET', 'mode': 'no-cors'})
+        ]);
+        return true;
+      } catch (e) {
+        debugPrint('ApiService: Web deleteExpoFromSheet error: $e');
+      }
+    }
+
+    try {
+      final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200 || response.statusCode == 302) return true;
+    } catch (e) {
+      debugPrint('ApiService: HTTP deleteExpo failed: $e');
+    }
+    return true;
   }
 }

@@ -137,31 +137,39 @@ class BuyerProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadExpos() async {
+  Future<void> loadExpos({bool forceRefresh = false}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? jsonStr = prefs.getString(_localExposKey);
-      if (jsonStr != null && jsonStr.isNotEmpty) {
-        final List<dynamic> decoded = jsonDecode(jsonStr);
-        _expos = decoded.map((e) => ExpoItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
-        if (_selectedExpo != null) {
-          final idx = _expos.indexWhere((x) => x.id == _selectedExpo!.id);
-          if (idx != -1) {
-            _selectedExpo = _expos[idx];
-          } else {
-            _selectedExpo = null;
-          }
+      final remoteExpos = await _apiService.fetchExpos();
+      if (remoteExpos.isNotEmpty) {
+        _expos = remoteExpos;
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        final String? jsonStr = prefs.getString(_localExposKey);
+        if (jsonStr != null && jsonStr.isNotEmpty) {
+          final List<dynamic> decoded = jsonDecode(jsonStr);
+          _expos = decoded.map((e) => ExpoItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
         }
-        notifyListeners();
       }
+
+      if (_selectedExpo != null) {
+        final idx = _expos.indexWhere((x) => x.id == _selectedExpo!.id);
+        if (idx != -1) {
+          _selectedExpo = _expos[idx];
+        } else {
+          _selectedExpo = null;
+        }
+      }
+      await _saveLocalExpos();
+      notifyListeners();
     } catch (e) {
-      debugPrint('BuyerProvider: Error loading local expos: $e');
+      debugPrint('BuyerProvider: Error loading expos: $e');
     }
   }
 
   Future<void> addExpo(ExpoItem expo) async {
     _expos.insert(0, expo);
     await _saveLocalExpos();
+    _apiService.saveExpoOnSheet(expo);
     notifyListeners();
   }
 
@@ -173,6 +181,7 @@ class BuyerProvider extends ChangeNotifier {
         _selectedExpo = updatedExpo;
       }
       await _saveLocalExpos();
+      _apiService.saveExpoOnSheet(updatedExpo);
       notifyListeners();
     }
   }
@@ -183,6 +192,7 @@ class BuyerProvider extends ChangeNotifier {
       _selectedExpo = null;
     }
     await _saveLocalExpos();
+    _apiService.deleteExpoFromSheet(expoId);
     notifyListeners();
   }
 
@@ -197,6 +207,7 @@ class BuyerProvider extends ChangeNotifier {
         _selectedExpo = updatedExpo;
       }
       await _saveLocalExpos();
+      _apiService.saveExpoOnSheet(updatedExpo);
       notifyListeners();
     }
   }
@@ -215,6 +226,7 @@ class BuyerProvider extends ChangeNotifier {
           _selectedExpo = updatedExpo;
         }
         await _saveLocalExpos();
+        _apiService.saveExpoOnSheet(updatedExpo);
         notifyListeners();
       }
     }
@@ -231,6 +243,7 @@ class BuyerProvider extends ChangeNotifier {
         _selectedExpo = updatedExpo;
       }
       await _saveLocalExpos();
+      _apiService.saveExpoOnSheet(updatedExpo);
       notifyListeners();
     }
   }

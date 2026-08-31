@@ -86,10 +86,13 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
     return text.replaceAll('"', '""').replaceAll('\n', ' ');
   }
 
-  /// Cleans ugly raw date strings like "Mon Aug 31 2026 00:00:00 GMT+0530..."
-  /// into clean "31 Aug 2026" format. Also accepts yyyy-MM-dd.
+  /// Cleans and formats date strings (single dates like 2026-08-31 or ranges like 14 - 16 Oct 2026)
   String _formatDisplayDate(String raw) {
     if (raw.isEmpty) return '';
+    // If it's already a clean readable range or date, keep it
+    if (raw.contains(' - ') && !raw.contains('GMT')) {
+      return raw;
+    }
     // Try parsing as ISO date first (yyyy-MM-dd)
     try {
       final d = DateFormat('yyyy-MM-dd').parse(raw);
@@ -106,7 +109,7 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
       final d = DateTime.parse(clean);
       return DateFormat('d MMM yyyy').format(d);
     } catch (_) {}
-    // Return as-is if nothing works
+    // Return as-is if already formatted
     return raw;
   }
 
@@ -1007,15 +1010,20 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
     final venueCtrl = TextEditingController(text: expo?.venue ?? '');
     final countryCtrl = TextEditingController(text: expo?.country ?? '');
 
-    // Parse existing date cleanly into a DateTime
-    DateTime? selectedDate;
-    if (expo != null && expo.expoDate.isNotEmpty) {
-      try {
-        selectedDate = DateFormat('yyyy-MM-dd').parse(expo.expoDate);
-      } catch (_) {
-        try {
-          selectedDate = DateTime.parse(expo.expoDate);
-        } catch (_) {}
+    DateTimeRange? selectedRange;
+    String displayDate = expo != null ? _formatDisplayDate(expo.expoDate) : '';
+
+    String formatPickedRange(DateTimeRange range) {
+      final start = range.start;
+      final end = range.end;
+      if (start.year == end.year && start.month == end.month && start.day == end.day) {
+        return DateFormat('d MMM yyyy').format(start);
+      } else if (start.year == end.year && start.month == end.month) {
+        return '${DateFormat('d').format(start)} - ${DateFormat('d MMM yyyy').format(end)}';
+      } else if (start.year == end.year) {
+        return '${DateFormat('d MMM').format(start)} - ${DateFormat('d MMM yyyy').format(end)}';
+      } else {
+        return '${DateFormat('d MMM yyyy').format(start)} - ${DateFormat('d MMM yyyy').format(end)}';
       }
     }
 
@@ -1052,102 +1060,117 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Date Picker Button
+                // Multi-Date / Date Range Picker
                 InkWell(
                   onTap: () async {
-                    final picked = await showDatePicker(
+                    final picked = await showDateRangePicker(
                       context: ctx,
-                      initialDate: selectedDate ?? DateTime.now(),
+                      initialDateRange: selectedRange,
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2035),
-                      helpText: 'Select Expo Date',
+                      helpText: 'Select Expo Dates (Single or Multiple Days)',
+                      saveText: 'Select',
+                      builder: (context, child) {
+                        return Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: const ColorScheme.light(
+                              primary: Color(0xFF8B2C69),
+                              onPrimary: Colors.white,
+                              surface: Colors.white,
+                              onSurface: Color(0xFF1E293B),
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
                     );
                     if (picked != null) {
-                      setDialogState(() => selectedDate = picked);
+                      setDialogState(() {
+                        selectedRange = picked;
+                        displayDate = formatPickedRange(picked);
+                      });
                     }
                   },
                   borderRadius: BorderRadius.circular(4),
                   child: InputDecorator(
                     decoration: const InputDecoration(
-                      labelText: 'Expo Date',
+                      labelText: 'Expo Dates (Single or Multi-Day)',
                       border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today_rounded, color: Color(0xFF8B2C69)),
+                      suffixIcon: Icon(Icons.date_range_rounded, color: Color(0xFF8B2C69)),
                     ),
                     child: Text(
-                      selectedDate != null
-                          ? DateFormat('d MMM yyyy').format(selectedDate!)
-                          : 'Tap to select date',
+                      displayDate.isNotEmpty ? displayDate : 'Tap to select dates (e.g. 14 - 16 Oct 2026)',
                       style: TextStyle(
-                        fontSize: 16,
-                        color: selectedDate != null ? const Color(0xFF1E293B) : Colors.grey.shade500,
+                        fontSize: 15,
+                        color: displayDate.isNotEmpty ? const Color(0xFF1E293B) : Colors.grey.shade500,
                       ),
                     ),
                   ),
                 ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: placeCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'City / Place',
-                        hintText: 'e.g. Mumbai',
-                        border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: placeCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'City / Place',
+                          hintText: 'e.g. Mumbai',
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: countryCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Country',
-                        hintText: 'e.g. India',
-                        border: OutlineInputBorder(),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: countryCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Country',
+                          hintText: 'e.g. India',
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B2C69), foregroundColor: Colors.white),
-            onPressed: () {
-              final name = nameCtrl.text.trim();
-              if (name.isEmpty) return;
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B2C69), foregroundColor: Colors.white),
+              onPressed: () {
+                final name = nameCtrl.text.trim();
+                if (name.isEmpty) return;
 
-              if (isEdit) {
-                p.editExpo(expo.copyWith(
-                  name: name,
-                  place: placeCtrl.text.trim(),
-                  venue: venueCtrl.text.trim(),
-                  expoDate: selectedDate != null ? DateFormat('yyyy-MM-dd').format(selectedDate!) : expo.expoDate,
-                  country: countryCtrl.text.trim(),
-                ));
-              } else {
-                p.addExpo(ExpoItem(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  name: name,
-                  place: placeCtrl.text.trim(),
-                  venue: venueCtrl.text.trim(),
-                  expoDate: selectedDate != null ? DateFormat('yyyy-MM-dd').format(selectedDate!) : '',
-                  country: countryCtrl.text.trim(),
-                ));
-              }
-              Navigator.pop(ctx);
-            },
-            child: Text(isEdit ? 'Save Changes' : 'Add Expo'),
-          ),
-        ],
-      ),
+                if (isEdit) {
+                  p.editExpo(expo.copyWith(
+                    name: name,
+                    place: placeCtrl.text.trim(),
+                    venue: venueCtrl.text.trim(),
+                    expoDate: displayDate.isNotEmpty ? displayDate : expo.expoDate,
+                    country: countryCtrl.text.trim(),
+                  ));
+                } else {
+                  p.addExpo(ExpoItem(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    name: name,
+                    place: placeCtrl.text.trim(),
+                    venue: venueCtrl.text.trim(),
+                    expoDate: displayDate,
+                    country: countryCtrl.text.trim(),
+                  ));
+                }
+                Navigator.pop(ctx);
+              },
+              child: Text(isEdit ? 'Save Changes' : 'Add Expo'),
+            ),
+          ],
+        ),
       ),
     );
   }

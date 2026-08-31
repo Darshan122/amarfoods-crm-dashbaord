@@ -500,21 +500,29 @@ class ApiService {
         : _scriptUrl;
 
     final String payloadJson = json.encode(expo.toJson());
-    // Use URL-safe base64 (- and _ instead of + and /) so no URI encoding issues
-    final String base64Payload = base64Url.encode(utf8.encode(payloadJson));
-    final String getUrl = '$targetScriptUrl?action=updateExpo&payload=$base64Payload';
+    // Use same standard base64 + URI encoding that works for buyers
+    final String base64Payload = base64Encode(utf8.encode(payloadJson));
+    final String getUrl = '$targetScriptUrl?action=updateExpo&payload=${Uri.encodeComponent(base64Payload)}';
 
     if (kIsWeb) {
       try {
-        // Method 1: XMLHttpRequest with no-cors - the most reliable way to fire-and-forget
+        // Use hidden iframe injection — most reliable for Google Apps Script cross-origin calls
         js.context.callMethod('eval', ['''
           (function() {
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", "$getUrl", true);
-            xhr.send();
+            var iframe = document.createElement('iframe');
+            iframe.src = "$getUrl";
+            iframe.style.display = "none";
+            iframe.style.width = "1px";
+            iframe.style.height = "1px";
+            iframe.style.position = "absolute";
+            iframe.style.left = "-9999px";
+            document.body.appendChild(iframe);
+            setTimeout(function() {
+              try { document.body.removeChild(iframe); } catch(e) {}
+            }, 10000);
           })();
         ''']);
-        debugPrint('ApiService: saveExpoOnSheet XHR sent');
+        debugPrint('ApiService: saveExpoOnSheet iframe sent');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web saveExpoOnSheet error: $e');
@@ -541,12 +549,18 @@ class ApiService {
       try {
         js.context.callMethod('eval', ['''
           (function() {
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", "$getUrl", true);
-            xhr.send();
+            var iframe = document.createElement('iframe');
+            iframe.src = "$getUrl";
+            iframe.style.display = "none";
+            iframe.style.position = "absolute";
+            iframe.style.left = "-9999px";
+            document.body.appendChild(iframe);
+            setTimeout(function() {
+              try { document.body.removeChild(iframe); } catch(e) {}
+            }, 10000);
           })();
         ''']);
-        debugPrint('ApiService: deleteExpoFromSheet XHR sent');
+        debugPrint('ApiService: deleteExpoFromSheet iframe sent');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web deleteExpoFromSheet error: $e');

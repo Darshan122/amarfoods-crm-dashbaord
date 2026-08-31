@@ -631,24 +631,28 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                InkWell(
-                                  onTap: () => UrlUtils.launchEmail(e),
-                                  tooltip: 'Send Email',
-                                  child: Text(
-                                    e,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF0284C7),
-                                      decoration: TextDecoration.underline,
+                                Tooltip(
+                                  message: 'Send Email',
+                                  child: InkWell(
+                                    onTap: () => UrlUtils.launchEmail(e),
+                                    child: Text(
+                                      e,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF0284C7),
+                                        decoration: TextDecoration.underline,
+                                      ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 6),
-                                InkWell(
-                                  onTap: () => _copyToClipboard(context, e, 'email address'),
-                                  tooltip: 'Copy Email',
-                                  child: const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF64748B)),
+                                Tooltip(
+                                  message: 'Copy Email',
+                                  child: InkWell(
+                                    onTap: () => _copyToClipboard(context, e, 'email address'),
+                                    child: const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF64748B)),
+                                  ),
                                 ),
                               ],
                             ),
@@ -695,36 +699,40 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                                 ),
                                 const SizedBox(width: 6),
                                 // Copy Button
-                                InkWell(
-                                  onTap: () => _copyToClipboard(context, ph, 'phone number'),
-                                  tooltip: 'Copy Phone Number',
-                                  child: const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF0284C7)),
+                                Tooltip(
+                                  message: 'Copy Phone Number',
+                                  child: InkWell(
+                                    onTap: () => _copyToClipboard(context, ph, 'phone number'),
+                                    child: const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF0284C7)),
+                                  ),
                                 ),
                                 const SizedBox(width: 6),
                                 // WhatsApp Button
-                                InkWell(
-                                  onTap: () => _openWhatsApp(ph),
-                                  tooltip: 'Check & Chat on WhatsApp',
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF25D366),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.chat_rounded, size: 11, color: Colors.white),
-                                        SizedBox(width: 3),
-                                        Text(
-                                          'WhatsApp',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
+                                Tooltip(
+                                  message: 'Check & Chat on WhatsApp',
+                                  child: InkWell(
+                                    onTap: () => _openWhatsApp(ph),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF25D366),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.chat_rounded, size: 11, color: Colors.white),
+                                          SizedBox(width: 3),
+                                          Text(
+                                            'WhatsApp',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -749,30 +757,32 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      InkWell(
-                        onTap: () => UrlUtils.launchURL(contact.companyWebsite),
-                        tooltip: 'Open Website in browser',
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0284C7).withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.2)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                contact.companyWebsite,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF0284C7),
+                      Tooltip(
+                        message: 'Open Website in browser',
+                        child: InkWell(
+                          onTap: () => UrlUtils.launchURL(contact.companyWebsite),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0284C7).withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.2)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  contact.companyWebsite,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF0284C7),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF0284C7)),
-                            ],
+                                const SizedBox(width: 4),
+                                const Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF0284C7)),
+                              ],
+                            ),
                           ),
                         ),
                       ),

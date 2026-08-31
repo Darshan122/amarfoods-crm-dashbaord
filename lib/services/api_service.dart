@@ -343,13 +343,14 @@ class ApiService {
 
     if (kIsWeb) {
       try {
-        js.context.callMethod('fetch', [
-          getUrl,
-          js.JsObject.jsify({'method': 'GET', 'mode': 'no-cors'})
-        ]);
-        final img = js.context['document'].callMethod('createElement', ['img']);
-        img['src'] = getUrl;
-        debugPrint('ApiService: deleteBuyerBySrNo($srNo) sent via Web fetch + img beacon');
+        final scriptEl = js.context['document'].callMethod('createElement', ['script']);
+        scriptEl['src'] = getUrl;
+        scriptEl['async'] = true;
+        js.context['document']['body'].callMethod('appendChild', [scriptEl]);
+        Future.delayed(const Duration(seconds: 10), () {
+          try { js.context['document']['body'].callMethod('removeChild', [scriptEl]); } catch (_) {}
+        });
+        debugPrint('ApiService: deleteBuyerBySrNo($srNo) sent via script-tag injection');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web deleteBuyerBySrNo error: $e');
@@ -383,13 +384,14 @@ class ApiService {
 
     if (kIsWeb) {
       try {
-        js.context.callMethod('fetch', [
-          getUrl,
-          js.JsObject.jsify({'method': 'GET', 'mode': 'no-cors'})
-        ]);
-        final img = js.context['document'].callMethod('createElement', ['img']);
-        img['src'] = getUrl;
-        debugPrint('ApiService: Sent buyer update to Google Sheet via Web fetch + img beacon');
+        final scriptEl = js.context['document'].callMethod('createElement', ['script']);
+        scriptEl['src'] = getUrl;
+        scriptEl['async'] = true;
+        js.context['document']['body'].callMethod('appendChild', [scriptEl]);
+        Future.delayed(const Duration(seconds: 10), () {
+          try { js.context['document']['body'].callMethod('removeChild', [scriptEl]); } catch (_) {}
+        });
+        debugPrint('ApiService: Sent buyer update via script-tag injection');
         _cachedBuyers = null;
         return true;
       } catch (e) {
@@ -503,13 +505,19 @@ class ApiService {
 
     if (kIsWeb) {
       try {
-        js.context.callMethod('fetch', [
-          getUrl,
-          js.JsObject.jsify({'method': 'GET', 'mode': 'no-cors'})
-        ]);
-        final img = js.context['document'].callMethod('createElement', ['img']);
-        img['src'] = getUrl;
-        debugPrint('ApiService: Sent updateExpo to Google Sheet via Web fetch + img beacon');
+        // Inject a hidden <script> tag — this bypasses CORS completely
+        // Google Apps Script returns JSON which the script tag loads as a cross-origin resource
+        final scriptEl = js.context['document'].callMethod('createElement', ['script']);
+        scriptEl['src'] = getUrl;
+        scriptEl['async'] = true;
+        js.context['document']['body'].callMethod('appendChild', [scriptEl]);
+        // Remove after 10s to keep DOM clean
+        Future.delayed(const Duration(seconds: 10), () {
+          try {
+            js.context['document']['body'].callMethod('removeChild', [scriptEl]);
+          } catch (_) {}
+        });
+        debugPrint('ApiService: Sent updateExpo via script-tag injection: $getUrl');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web saveExpoOnSheet error: $e');
@@ -534,13 +542,16 @@ class ApiService {
 
     if (kIsWeb) {
       try {
-        js.context.callMethod('fetch', [
-          getUrl,
-          js.JsObject.jsify({'method': 'GET', 'mode': 'no-cors'})
-        ]);
-        final img = js.context['document'].callMethod('createElement', ['img']);
-        img['src'] = getUrl;
-        debugPrint('ApiService: Sent deleteExpo to Google Sheet via Web fetch + img beacon');
+        final scriptEl = js.context['document'].callMethod('createElement', ['script']);
+        scriptEl['src'] = getUrl;
+        scriptEl['async'] = true;
+        js.context['document']['body'].callMethod('appendChild', [scriptEl]);
+        Future.delayed(const Duration(seconds: 10), () {
+          try {
+            js.context['document']['body'].callMethod('removeChild', [scriptEl]);
+          } catch (_) {}
+        });
+        debugPrint('ApiService: Sent deleteExpo via script-tag injection: $getUrl');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web deleteExpoFromSheet error: $e');

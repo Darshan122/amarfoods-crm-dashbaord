@@ -4,9 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/buyer.dart';
+import '../models/expo.dart';
 import '../services/api_service.dart';
 
-enum MainTab { dailyWorkArea, allImporters, analytics, emailTemplates }
+enum MainTab { dailyWorkArea, allImporters, analytics, emailTemplates, exposVisited }
 
 class BuyerProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -43,6 +44,7 @@ class BuyerProvider extends ChangeNotifier {
 
   BuyerProvider() {
     loadBuyers();
+    loadExpos();
   }
 
   // Getters
@@ -57,6 +59,8 @@ class BuyerProvider extends ChangeNotifier {
   Set<String> get selectedBuyerIds => _selectedBuyerIds;
   String? get errorMessage => _errorMessage;
   bool get isConnected => _apiService.isConnected;
+  List<ExpoItem> get expos => _expos;
+  ExpoItem? get selectedExpo => _selectedExpo;
   String? get scriptUrl => _apiService.scriptUrl;
 
   // Tabs & Settings
@@ -109,6 +113,126 @@ class BuyerProvider extends ChangeNotifier {
       debugPrint('BuyerProvider: Error loading local buyers: $e');
     }
     return [];
+  }
+
+  // ------------------------------------------------------------------
+  // EXPOS VISITED STATE & METHODS
+  // ------------------------------------------------------------------
+  List<ExpoItem> _expos = [];
+  ExpoItem? _selectedExpo;
+  static const String _localExposKey = 'amar_crm_local_expos_v1';
+
+  void selectExpo(ExpoItem? expo) {
+    _selectedExpo = expo;
+    notifyListeners();
+  }
+
+  Future<void> _saveLocalExpos() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String jsonStr = jsonEncode(_expos.map((e) => e.toJson()).toList());
+      await prefs.setString(_localExposKey, jsonStr);
+    } catch (e) {
+      debugPrint('BuyerProvider: Error saving local expos: $e');
+    }
+  }
+
+  Future<void> loadExpos() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? jsonStr = prefs.getString(_localExposKey);
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(jsonStr);
+        _expos = decoded.map((e) => ExpoItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+        if (_selectedExpo != null) {
+          final idx = _expos.indexWhere((x) => x.id == _selectedExpo!.id);
+          if (idx != -1) {
+            _selectedExpo = _expos[idx];
+          } else {
+            _selectedExpo = null;
+          }
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('BuyerProvider: Error loading local expos: $e');
+    }
+  }
+
+  Future<void> addExpo(ExpoItem expo) async {
+    _expos.insert(0, expo);
+    await _saveLocalExpos();
+    notifyListeners();
+  }
+
+  Future<void> editExpo(ExpoItem updatedExpo) async {
+    final index = _expos.indexWhere((e) => e.id == updatedExpo.id);
+    if (index != -1) {
+      _expos[index] = updatedExpo;
+      if (_selectedExpo?.id == updatedExpo.id) {
+        _selectedExpo = updatedExpo;
+      }
+      await _saveLocalExpos();
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteExpo(String expoId) async {
+    _expos.removeWhere((e) => e.id == expoId);
+    if (_selectedExpo?.id == expoId) {
+      _selectedExpo = null;
+    }
+    await _saveLocalExpos();
+    notifyListeners();
+  }
+
+  Future<void> addContactToExpo(String expoId, ExpoContact contact) async {
+    final index = _expos.indexWhere((e) => e.id == expoId);
+    if (index != -1) {
+      final currentExpo = _expos[index];
+      final updatedContacts = List<ExpoContact>.from(currentExpo.contacts)..insert(0, contact);
+      final updatedExpo = currentExpo.copyWith(contacts: updatedContacts);
+      _expos[index] = updatedExpo;
+      if (_selectedExpo?.id == expoId) {
+        _selectedExpo = updatedExpo;
+      }
+      await _saveLocalExpos();
+      notifyListeners();
+    }
+  }
+
+  Future<void> editExpoContact(String expoId, ExpoContact updatedContact) async {
+    final index = _expos.indexWhere((e) => e.id == expoId);
+    if (index != -1) {
+      final currentExpo = _expos[index];
+      final cIndex = currentExpo.contacts.indexWhere((c) => c.id == updatedContact.id);
+      if (cIndex != -1) {
+        final updatedContacts = List<ExpoContact>.from(currentExpo.contacts);
+        updatedContacts[cIndex] = updatedContact;
+        final updatedExpo = currentExpo.copyWith(contacts: updatedContacts);
+        _expos[index] = updatedExpo;
+        if (_selectedExpo?.id == expoId) {
+          _selectedExpo = updatedExpo;
+        }
+        await _saveLocalExpos();
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> deleteExpoContact(String expoId, String contactId) async {
+    final index = _expos.indexWhere((e) => e.id == expoId);
+    if (index != -1) {
+      final currentExpo = _expos[index];
+      final updatedContacts = currentExpo.contacts.where((c) => c.id != contactId).toList();
+      final updatedExpo = currentExpo.copyWith(contacts: updatedContacts);
+      _expos[index] = updatedExpo;
+      if (_selectedExpo?.id == expoId) {
+        _selectedExpo = updatedExpo;
+      }
+      await _saveLocalExpos();
+      notifyListeners();
+    }
   }
 
   Future<void> loadBuyers({bool forceRefresh = false}) async {

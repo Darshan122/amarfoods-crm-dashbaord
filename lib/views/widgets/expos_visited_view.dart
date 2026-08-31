@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../models/expo.dart';
 import '../../providers/buyer_provider.dart';
+import '../../services/url_utils.dart';
 
 class ExposVisitedView extends StatefulWidget {
   final BuyerProvider provider;
@@ -14,6 +16,33 @@ class ExposVisitedView extends StatefulWidget {
 class _ExposVisitedViewState extends State<ExposVisitedView> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+
+  void _copyToClipboard(BuildContext context, String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Copied $label to clipboard: $text')),
+          ],
+        ),
+        backgroundColor: const Color(0xFF009647),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _openWhatsApp(String phone) {
+    final String digitsOnly = phone.replaceAll(RegExp(r'[^\d]'), '');
+    if (digitsOnly.isNotEmpty) {
+      final String waUrl = 'https://wa.me/$digitsOnly';
+      UrlUtils.launchURL(waUrl);
+    }
+  }
 
   @override
   void dispose() {
@@ -570,54 +599,183 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
 
             const SizedBox(height: 12),
 
-            // Contact Info Details (Emails, Phones, Website, Location)
+            // Contact Info Details (Emails, Phones with Copy & WhatsApp, Website, Location)
             Wrap(
-              spacing: 16,
-              runSpacing: 8,
+              spacing: 12,
+              runSpacing: 10,
               children: [
                 if (contact.emails.isNotEmpty)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.email_outlined, size: 16, color: Color(0xFF64748B)),
-                      const SizedBox(width: 6),
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.email_outlined, size: 15, color: Color(0xFF64748B)),
+                          SizedBox(width: 4),
+                          Text('Emails:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
                       Wrap(
-                        spacing: 6,
-                        children: contact.emails.map((e) => Chip(
-                          label: Text(e, style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B))),
-                          backgroundColor: const Color(0xFFF1F5F9),
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                        )).toList(),
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: contact.emails.map((e) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                InkWell(
+                                  onTap: () => UrlUtils.launchEmail(e),
+                                  tooltip: 'Send Email',
+                                  child: Text(
+                                    e,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF0284C7),
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                InkWell(
+                                  onTap: () => _copyToClipboard(context, e, 'email address'),
+                                  tooltip: 'Copy Email',
+                                  child: const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ],
                   ),
+
                 if (contact.phoneNumbers.isNotEmpty)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.phone_outlined, size: 16, color: Color(0xFF64748B)),
-                      const SizedBox(width: 6),
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.phone_outlined, size: 15, color: Color(0xFF64748B)),
+                          SizedBox(width: 4),
+                          Text('Phone Numbers:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
                       Wrap(
-                        spacing: 6,
-                        children: contact.phoneNumbers.map((ph) => Chip(
-                          label: Text(ph, style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B))),
-                          backgroundColor: const Color(0xFFF1F5F9),
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                        )).toList(),
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: contact.phoneNumbers.map((ph) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  ph,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF1E293B),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                // Copy Button
+                                InkWell(
+                                  onTap: () => _copyToClipboard(context, ph, 'phone number'),
+                                  tooltip: 'Copy Phone Number',
+                                  child: const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF0284C7)),
+                                ),
+                                const SizedBox(width: 6),
+                                // WhatsApp Button
+                                InkWell(
+                                  onTap: () => _openWhatsApp(ph),
+                                  tooltip: 'Check & Chat on WhatsApp',
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF25D366),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.chat_rounded, size: 11, color: Colors.white),
+                                        SizedBox(width: 3),
+                                        Text(
+                                          'WhatsApp',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ],
                   ),
+
                 if (contact.companyWebsite.isNotEmpty)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.language_rounded, size: 16, color: Color(0xFF64748B)),
-                      const SizedBox(width: 6),
-                      Text(contact.companyWebsite, style: const TextStyle(fontSize: 13, color: Color(0xFF0284C7), decoration: TextDecoration.underline)),
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.language_rounded, size: 15, color: Color(0xFF64748B)),
+                          SizedBox(width: 4),
+                          Text('Website:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      InkWell(
+                        onTap: () => UrlUtils.launchURL(contact.companyWebsite),
+                        tooltip: 'Open Website in browser',
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0284C7).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.2)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                contact.companyWebsite,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF0284C7),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF0284C7)),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 if (contact.city.isNotEmpty || contact.country.isNotEmpty || contact.address.isNotEmpty)

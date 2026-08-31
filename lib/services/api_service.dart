@@ -343,14 +343,14 @@ class ApiService {
 
     if (kIsWeb) {
       try {
-        final scriptEl = js.context['document'].callMethod('createElement', ['script']);
-        scriptEl['src'] = getUrl;
-        scriptEl['async'] = true;
-        js.context['document']['body'].callMethod('appendChild', [scriptEl]);
-        Future.delayed(const Duration(seconds: 10), () {
-          try { js.context['document']['body'].callMethod('removeChild', [scriptEl]); } catch (_) {}
-        });
-        debugPrint('ApiService: deleteBuyerBySrNo($srNo) sent via script-tag injection');
+        js.context.callMethod('eval', ['''
+          (function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "$getUrl", true);
+            xhr.send();
+          })();
+        ''']);
+        debugPrint('ApiService: deleteBuyerBySrNo($srNo) XHR sent');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web deleteBuyerBySrNo error: $e');
@@ -384,18 +384,18 @@ class ApiService {
 
     if (kIsWeb) {
       try {
-        final scriptEl = js.context['document'].callMethod('createElement', ['script']);
-        scriptEl['src'] = getUrl;
-        scriptEl['async'] = true;
-        js.context['document']['body'].callMethod('appendChild', [scriptEl]);
-        Future.delayed(const Duration(seconds: 10), () {
-          try { js.context['document']['body'].callMethod('removeChild', [scriptEl]); } catch (_) {}
-        });
-        debugPrint('ApiService: Sent buyer update via script-tag injection');
+        js.context.callMethod('eval', ['''
+          (function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "$getUrl", true);
+            xhr.send();
+          })();
+        ''']);
+        debugPrint('ApiService: updateBuyerOnSheet XHR sent');
         _cachedBuyers = null;
         return true;
       } catch (e) {
-        debugPrint('ApiService: Web no-cors fetch error: $e');
+        debugPrint('ApiService: Web updateBuyer XHR error: $e');
       }
     }
 
@@ -500,24 +500,21 @@ class ApiService {
         : _scriptUrl;
 
     final String payloadJson = json.encode(expo.toJson());
-    final String base64Payload = base64Encode(utf8.encode(payloadJson));
-    final String getUrl = '$targetScriptUrl?action=updateExpo&payload=${Uri.encodeComponent(base64Payload)}';
+    // Use URL-safe base64 (- and _ instead of + and /) so no URI encoding issues
+    final String base64Payload = base64Url.encode(utf8.encode(payloadJson));
+    final String getUrl = '$targetScriptUrl?action=updateExpo&payload=$base64Payload';
 
     if (kIsWeb) {
       try {
-        // Inject a hidden <script> tag — this bypasses CORS completely
-        // Google Apps Script returns JSON which the script tag loads as a cross-origin resource
-        final scriptEl = js.context['document'].callMethod('createElement', ['script']);
-        scriptEl['src'] = getUrl;
-        scriptEl['async'] = true;
-        js.context['document']['body'].callMethod('appendChild', [scriptEl]);
-        // Remove after 10s to keep DOM clean
-        Future.delayed(const Duration(seconds: 10), () {
-          try {
-            js.context['document']['body'].callMethod('removeChild', [scriptEl]);
-          } catch (_) {}
-        });
-        debugPrint('ApiService: Sent updateExpo via script-tag injection: $getUrl');
+        // Method 1: XMLHttpRequest with no-cors - the most reliable way to fire-and-forget
+        js.context.callMethod('eval', ['''
+          (function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "$getUrl", true);
+            xhr.send();
+          })();
+        ''']);
+        debugPrint('ApiService: saveExpoOnSheet XHR sent');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web saveExpoOnSheet error: $e');
@@ -525,7 +522,7 @@ class ApiService {
     }
 
     try {
-      final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 5));
+      final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200 || response.statusCode == 302) return true;
     } catch (e) {
       debugPrint('ApiService: HTTP GET updateExpo failed: $e');
@@ -542,16 +539,14 @@ class ApiService {
 
     if (kIsWeb) {
       try {
-        final scriptEl = js.context['document'].callMethod('createElement', ['script']);
-        scriptEl['src'] = getUrl;
-        scriptEl['async'] = true;
-        js.context['document']['body'].callMethod('appendChild', [scriptEl]);
-        Future.delayed(const Duration(seconds: 10), () {
-          try {
-            js.context['document']['body'].callMethod('removeChild', [scriptEl]);
-          } catch (_) {}
-        });
-        debugPrint('ApiService: Sent deleteExpo via script-tag injection: $getUrl');
+        js.context.callMethod('eval', ['''
+          (function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "$getUrl", true);
+            xhr.send();
+          })();
+        ''']);
+        debugPrint('ApiService: deleteExpoFromSheet XHR sent');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web deleteExpoFromSheet error: $e');
@@ -559,7 +554,7 @@ class ApiService {
     }
 
     try {
-      final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 5));
+      final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200 || response.statusCode == 302) return true;
     } catch (e) {
       debugPrint('ApiService: HTTP deleteExpo failed: $e');

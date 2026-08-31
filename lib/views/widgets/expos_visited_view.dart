@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../../models/expo.dart';
 import '../../providers/buyer_provider.dart';
 import '../../services/url_utils.dart';
@@ -83,6 +84,30 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
 
   String _cleanCsv(String text) {
     return text.replaceAll('"', '""').replaceAll('\n', ' ');
+  }
+
+  /// Cleans ugly raw date strings like "Mon Aug 31 2026 00:00:00 GMT+0530..."
+  /// into clean "31 Aug 2026" format. Also accepts yyyy-MM-dd.
+  String _formatDisplayDate(String raw) {
+    if (raw.isEmpty) return '';
+    // Try parsing as ISO date first (yyyy-MM-dd)
+    try {
+      final d = DateFormat('yyyy-MM-dd').parse(raw);
+      return DateFormat('d MMM yyyy').format(d);
+    } catch (_) {}
+    // Try parsing as full JS Date toString()
+    try {
+      final d = DateTime.parse(raw);
+      return DateFormat('d MMM yyyy').format(d);
+    } catch (_) {}
+    // Last resort: strip timezone junk, try to parse what remains
+    try {
+      final clean = raw.replaceAll(RegExp(r'GMT[+-]\d{4}.*'), '').trim();
+      final d = DateTime.parse(clean);
+      return DateFormat('d MMM yyyy').format(d);
+    } catch (_) {}
+    // Return as-is if nothing works
+    return raw;
   }
 
   @override
@@ -352,7 +377,7 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                                 children: [
                                   const Icon(Icons.calendar_today_rounded, size: 14, color: Color(0xFF64748B)),
                                   const SizedBox(width: 4),
-                                  Text(expo.expoDate, style: const TextStyle(fontSize: 13, color: Color(0xFF475569))),
+                                  Text(_formatDisplayDate(expo.expoDate), style: const TextStyle(fontSize: 13, color: Color(0xFF475569))),
                                 ],
                               ),
                           ],
@@ -507,7 +532,7 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                       style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
                     ),
                   if (expo.expoDate.isNotEmpty)
-                    Text('Date: ${expo.expoDate}', style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                    Text('Date: ${_formatDisplayDate(expo.expoDate)}', style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
                 ],
               ),
             ],
@@ -980,49 +1005,85 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
     final nameCtrl = TextEditingController(text: expo?.name ?? '');
     final placeCtrl = TextEditingController(text: expo?.place ?? '');
     final venueCtrl = TextEditingController(text: expo?.venue ?? '');
-    final dateCtrl = TextEditingController(text: expo?.expoDate ?? '');
     final countryCtrl = TextEditingController(text: expo?.country ?? '');
+
+    // Parse existing date cleanly into a DateTime
+    DateTime? selectedDate;
+    if (expo != null && expo.expoDate.isNotEmpty) {
+      try {
+        selectedDate = DateFormat('yyyy-MM-dd').parse(expo.expoDate);
+      } catch (_) {
+        try {
+          selectedDate = DateTime.parse(expo.expoDate);
+        } catch (_) {}
+      }
+    }
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(isEdit ? Icons.edit_outlined : Icons.add_rounded, color: const Color(0xFF8B2C69)),
-            const SizedBox(width: 8),
-            Text(isEdit ? 'Edit Expo' : 'Add Visited Expo'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Row(
             children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Expo Name *',
-                  hintText: 'e.g. FI India 2016',
-                  border: OutlineInputBorder(),
+              Icon(isEdit ? Icons.edit_outlined : Icons.add_rounded, color: const Color(0xFF8B2C69)),
+              const SizedBox(width: 8),
+              Text(isEdit ? 'Edit Expo' : 'Add Visited Expo'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Expo Name *',
+                    hintText: 'e.g. FI India 2016',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: venueCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Expo Venue',
-                  hintText: 'e.g. Pragati Maidan / BKC',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: venueCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Expo Venue',
+                    hintText: 'e.g. Pragati Maidan / BKC',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: dateCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Expo Date',
-                  hintText: 'e.g. 14-16 Oct 2016',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                // Date Picker Button
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: selectedDate ?? DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2035),
+                      helpText: 'Select Expo Date',
+                    );
+                    if (picked != null) {
+                      setDialogState(() => selectedDate = picked);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(4),
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Expo Date',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today_rounded, color: Color(0xFF8B2C69)),
+                    ),
+                    child: Text(
+                      selectedDate != null
+                          ? DateFormat('d MMM yyyy').format(selectedDate!)
+                          : 'Tap to select date',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: selectedDate != null ? const Color(0xFF1E293B) : Colors.grey.shade500,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -1068,7 +1129,7 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                   name: name,
                   place: placeCtrl.text.trim(),
                   venue: venueCtrl.text.trim(),
-                  expoDate: dateCtrl.text.trim(),
+                  expoDate: selectedDate != null ? DateFormat('yyyy-MM-dd').format(selectedDate!) : expo.expoDate,
                   country: countryCtrl.text.trim(),
                 ));
               } else {
@@ -1077,7 +1138,7 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                   name: name,
                   place: placeCtrl.text.trim(),
                   venue: venueCtrl.text.trim(),
-                  expoDate: dateCtrl.text.trim(),
+                  expoDate: selectedDate != null ? DateFormat('yyyy-MM-dd').format(selectedDate!) : '',
                   country: countryCtrl.text.trim(),
                 ));
               }
@@ -1086,6 +1147,7 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
             child: Text(isEdit ? 'Save Changes' : 'Add Expo'),
           ),
         ],
+      ),
       ),
     );
   }

@@ -499,14 +499,28 @@ class ApiService {
         ? customScriptUrl.trim()
         : _scriptUrl;
 
-    // Same encoding as buyers — standard base64 + URI encoding
     final String payloadJson = json.encode(expo.toJson());
     final String base64Payload = base64Encode(utf8.encode(payloadJson));
     final String getUrl = '$targetScriptUrl?action=updateExpo&payload=${Uri.encodeComponent(base64Payload)}';
+    final String postBody = json.encode({
+      'action': 'updateExpo',
+      'expo': expo.toJson(),
+    });
 
     if (kIsWeb) {
       try {
-        // EXACTLY the same as buyer XHR pattern that works
+        // 1. Direct POST fetch with text/plain body (no-cors) - standard for web-to-Apps-Script
+        js.context.callMethod('fetch', [
+          targetScriptUrl,
+          js.JsObject.jsify({
+            'method': 'POST',
+            'mode': 'no-cors',
+            'headers': {'Content-Type': 'text/plain;charset=utf-8'},
+            'body': postBody,
+          }),
+        ]);
+
+        // 2. Secondary GET via XHR
         js.context.callMethod('eval', ['''
           (function() {
             var xhr = new XMLHttpRequest();
@@ -514,7 +528,7 @@ class ApiService {
             xhr.send();
           })();
         ''']);
-        debugPrint('ApiService: saveExpoOnSheet XHR sent');
+        debugPrint('ApiService: saveExpoOnSheet sent via POST & GET');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web saveExpoOnSheet error: $e');
@@ -522,10 +536,14 @@ class ApiService {
     }
 
     try {
-      final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 8));
+      final response = await http.post(
+        Uri.parse(targetScriptUrl),
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: postBody,
+      ).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200 || response.statusCode == 302) return true;
     } catch (e) {
-      debugPrint('ApiService: HTTP GET updateExpo failed: $e');
+      debugPrint('ApiService: HTTP POST updateExpo failed: $e');
     }
     return true;
   }
@@ -536,9 +554,22 @@ class ApiService {
         : _scriptUrl;
 
     final String getUrl = '$targetScriptUrl?action=deleteExpo&id=${Uri.encodeComponent(expoId)}';
+    final String postBody = json.encode({
+      'action': 'deleteExpo',
+      'id': expoId,
+    });
 
     if (kIsWeb) {
       try {
+        js.context.callMethod('fetch', [
+          targetScriptUrl,
+          js.JsObject.jsify({
+            'method': 'POST',
+            'mode': 'no-cors',
+            'headers': {'Content-Type': 'text/plain;charset=utf-8'},
+            'body': postBody,
+          }),
+        ]);
         js.context.callMethod('eval', ['''
           (function() {
             var xhr = new XMLHttpRequest();
@@ -546,7 +577,7 @@ class ApiService {
             xhr.send();
           })();
         ''']);
-        debugPrint('ApiService: deleteExpoFromSheet XHR sent');
+        debugPrint('ApiService: deleteExpoFromSheet sent via POST & GET');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web deleteExpoFromSheet error: $e');
@@ -554,7 +585,11 @@ class ApiService {
     }
 
     try {
-      final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 8));
+      final response = await http.post(
+        Uri.parse(targetScriptUrl),
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: postBody,
+      ).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200 || response.statusCode == 302) return true;
     } catch (e) {
       debugPrint('ApiService: HTTP deleteExpo failed: $e');

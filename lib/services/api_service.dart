@@ -330,19 +330,34 @@ class ApiService {
   }
 
   /// Delete a buyer row from Google Sheet by its Sr. No. (Column A).
-  /// The Apps Script searches Column A for this numeric value.
   Future<bool> deleteBuyerBySrNo(int srNo, {String? customScriptUrl}) async {
     final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
         ? customScriptUrl.trim()
         : _scriptUrl;
 
-    // Pass the numeric srNo as the id parameter
     final String getUrl = '$targetScriptUrl?action=deleteBuyer&id=${Uri.encodeComponent(srNo.toString())}';
+    final String postBody = json.encode({
+      'action': 'deleteBuyer',
+      'id': srNo.toString(),
+      'srNo': srNo,
+    });
 
     _cachedBuyers = null; // Always clear cache so next fetch is fresh
 
     if (kIsWeb) {
       try {
+        // 1. Direct POST fetch with text/plain body (no-cors)
+        js.context.callMethod('fetch', [
+          targetScriptUrl,
+          js.JsObject.jsify({
+            'method': 'POST',
+            'mode': 'no-cors',
+            'headers': {'Content-Type': 'text/plain;charset=utf-8'},
+            'body': postBody,
+          }),
+        ]);
+
+        // 2. Secondary GET via XHR
         js.context.callMethod('eval', ['''
           (function() {
             var xhr = new XMLHttpRequest();
@@ -350,7 +365,7 @@ class ApiService {
             xhr.send();
           })();
         ''']);
-        debugPrint('ApiService: deleteBuyerBySrNo($srNo) XHR sent');
+        debugPrint('ApiService: deleteBuyerBySrNo($srNo) sent via POST & GET');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web deleteBuyerBySrNo error: $e');
@@ -358,16 +373,19 @@ class ApiService {
     }
 
     try {
-      final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 5));
+      final response = await http.post(
+        Uri.parse(targetScriptUrl),
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: postBody,
+      ).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200 || response.statusCode == 302) {
         return true;
       }
     } catch (e) {
-      debugPrint('ApiService: HTTP deleteBuyerBySrNo error: $e');
+      debugPrint('ApiService: HTTP POST deleteBuyerBySrNo error: $e');
     }
     return true; // Optimistic: local state already updated
   }
-
 
   Future<int> batchMarkSent(List<String> buyerIds, {bool sendEmail = false}) async {
     return buyerIds.length;
@@ -381,9 +399,27 @@ class ApiService {
     final String buyerJson = json.encode(buyer.toJson());
     final String base64Payload = base64Encode(utf8.encode(buyerJson));
     final String getUrl = '$targetScriptUrl?action=updateBuyer&payload=${Uri.encodeComponent(base64Payload)}';
+    final String postBody = json.encode({
+      'action': 'updateBuyer',
+      'buyer': buyer.toJson(),
+    });
+
+    _cachedBuyers = null;
 
     if (kIsWeb) {
       try {
+        // 1. Direct POST fetch with text/plain body (no-cors) - standard for web-to-Apps-Script
+        js.context.callMethod('fetch', [
+          targetScriptUrl,
+          js.JsObject.jsify({
+            'method': 'POST',
+            'mode': 'no-cors',
+            'headers': {'Content-Type': 'text/plain;charset=utf-8'},
+            'body': postBody,
+          }),
+        ]);
+
+        // 2. Secondary GET via XHR
         js.context.callMethod('eval', ['''
           (function() {
             var xhr = new XMLHttpRequest();
@@ -391,41 +427,26 @@ class ApiService {
             xhr.send();
           })();
         ''']);
-        debugPrint('ApiService: updateBuyerOnSheet XHR sent');
-        _cachedBuyers = null;
+        debugPrint('ApiService: updateBuyerOnSheet sent via POST & GET');
         return true;
       } catch (e) {
-        debugPrint('ApiService: Web updateBuyer XHR error: $e');
+        debugPrint('ApiService: Web updateBuyer error: $e');
       }
     }
 
     try {
-      final response = await http.get(Uri.parse(getUrl)).timeout(const Duration(seconds: 5));
-      if (response.statusCode == 200 || response.statusCode == 302) {
-        _cachedBuyers = null;
-        return true;
-      }
-    } catch (e) {
-      debugPrint('ApiService: HTTP GET update failed: $e');
-    }
-
-    try {
-      final jsonPayload = json.encode({
-        'action': 'updateBuyer',
-        'buyer': buyer.toJson(),
-      });
       final response = await http.post(
         Uri.parse(targetScriptUrl),
         headers: {'Content-Type': 'text/plain;charset=utf-8'},
-        body: jsonPayload,
-      ).timeout(const Duration(seconds: 5));
+        body: postBody,
+      ).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200 || response.statusCode == 302) {
         _cachedBuyers = null;
         return true;
       }
     } catch (e) {
-      debugPrint('ApiService: HTTP POST update failed: $e');
+      debugPrint('ApiService: HTTP POST updateBuyer failed: $e');
     }
     return false;
   }

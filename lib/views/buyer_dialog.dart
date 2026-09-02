@@ -28,7 +28,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
   late TextEditingController _companyCtrl;
   final List<TextEditingController> _emailCtrls = [];
   late TextEditingController _websiteCtrl;
-  late TextEditingController _phoneCtrl;
+  final List<TextEditingController> _phoneCtrls = [];
   late TextEditingController _followUpDateCtrl;
   late TextEditingController _notesCtrl;
 
@@ -66,20 +66,26 @@ class _BuyerDialogState extends State<BuyerDialog> {
 
     _websiteCtrl = TextEditingController(text: b?.website ?? '');
 
-    String rawPhone = b?.phone ?? '';
-    if (rawPhone.startsWith("'")) rawPhone = rawPhone.substring(1).trim();
-    final lowerPhone = rawPhone.toLowerCase();
-    if (lowerPhone == '#error!' ||
-        lowerPhone.contains('#error') ||
-        lowerPhone == '#ref!' ||
-        lowerPhone == '#value!' ||
-        lowerPhone == '#n/a' ||
-        lowerPhone == 'n/a' ||
-        lowerPhone == '-' ||
-        lowerPhone == 'null') {
-      rawPhone = '';
+    final rawPhone = b?.phone ?? '';
+    final phoneList = rawPhone
+        .split(RegExp(r'[,;\n]\s*'))
+        .map((p) {
+          String s = p.trim();
+          if (s.startsWith("'")) s = s.substring(1).trim();
+          return s;
+        })
+        .where((p) {
+          final lower = p.toLowerCase();
+          return p.isNotEmpty && !lower.contains('#error') && lower != 'n/a' && p != '-' && lower != 'null';
+        })
+        .toList();
+    if (phoneList.isEmpty) {
+      _phoneCtrls.add(TextEditingController());
+    } else {
+      for (var ph in phoneList) {
+        _phoneCtrls.add(TextEditingController(text: ph));
+      }
     }
-    _phoneCtrl = TextEditingController(text: rawPhone);
 
     String dateVal = b?.nextDueDate ?? '';
     if (dateVal.isNotEmpty) {
@@ -115,6 +121,20 @@ class _BuyerDialogState extends State<BuyerDialog> {
     });
   }
 
+  void _addPhoneField([String text = '']) {
+    setState(() {
+      _phoneCtrls.add(TextEditingController(text: text));
+    });
+  }
+
+  void _removePhoneField(int index) {
+    if (_phoneCtrls.length <= 1) return;
+    setState(() {
+      _phoneCtrls[index].dispose();
+      _phoneCtrls.removeAt(index);
+    });
+  }
+
   @override
   void dispose() {
     _companyCtrl.dispose();
@@ -122,7 +142,9 @@ class _BuyerDialogState extends State<BuyerDialog> {
       ctrl.dispose();
     }
     _websiteCtrl.dispose();
-    _phoneCtrl.dispose();
+    for (var ctrl in _phoneCtrls) {
+      ctrl.dispose();
+    }
     _followUpDateCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
@@ -337,13 +359,68 @@ class _BuyerDialogState extends State<BuyerDialog> {
                             decoration: _inputDecoration('https://...'),
                           ),
                         ),
-                        _buildLabeledField(
-                          label: 'Phone / WhatsApp',
-                          child: TextFormField(
-                            controller: _phoneCtrl,
-                            style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
-                            decoration: _inputDecoration('+1 234 567 890'),
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Phone / WhatsApp (Multiple)',
+                              style: TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            const SizedBox(height: 2),
+                            Text('Press Enter or click + Add Phone to add another phone.', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+                            const SizedBox(height: 6),
+                            ..._phoneCtrls.asMap().entries.map((entry) {
+                              final idx = entry.key;
+                              final ctrl = entry.value;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: ctrl,
+                                        style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+                                        textInputAction: TextInputAction.next,
+                                        onFieldSubmitted: (_) => _addPhoneField(),
+                                        decoration: _inputDecoration(idx == 0 ? 'Primary Phone (+91 92055 58838)' : 'Secondary Phone ${idx + 1}'),
+                                      ),
+                                    ),
+                                    if (idx > 0) ...[
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                                        onPressed: () => _removePhoneField(idx),
+                                        tooltip: 'Remove Phone',
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              );
+                            }),
+                            InkWell(
+                              onTap: () => _addPhoneField(),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF009647).withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0xFF009647).withValues(alpha: 0.3)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.add_rounded, color: Color(0xFF009647), size: 16),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      '+ Add Phone Field',
+                                      style: TextStyle(color: Color(0xFF009647), fontWeight: FontWeight.bold, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 18),
@@ -515,6 +592,11 @@ class _BuyerDialogState extends State<BuyerDialog> {
         .where((e) => e.isNotEmpty)
         .join(', ');
 
+    final phoneStr = _phoneCtrls
+        .map((c) => c.text.trim())
+        .where((e) => e.isNotEmpty && !e.toLowerCase().contains('#error'))
+        .join(', ');
+
     final srNoVal = widget.buyer?.srNo ?? widget.nextSrNo;
     final newBuyer = Buyer(
       id: widget.buyer?.id ?? Buyer.formatBuyerId(srNoVal),
@@ -522,7 +604,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
       company: companyName,
       website: _websiteCtrl.text.trim(),
       email: emailStr,
-      phone: _phoneCtrl.text.trim(),
+      phone: phoneStr,
       connectionMethod: _connectionType,
       connectionDate: widget.buyer?.connectionDate ?? DateFormat('yyyy-MM-dd').format(DateTime.now()),
       firstEmailDate: widget.buyer?.firstEmailDate ?? '',
@@ -645,6 +727,10 @@ class _BuyerDialogState extends State<BuyerDialog> {
               if (newBuyer.email.isNotEmpty && !combinedEmail.contains(newBuyer.email)) {
                 combinedEmail = combinedEmail.isEmpty ? newBuyer.email : '$combinedEmail, ${newBuyer.email}';
               }
+              String combinedPhone = existing.phone;
+              if (newBuyer.phone.isNotEmpty && !combinedPhone.contains(newBuyer.phone)) {
+                combinedPhone = combinedPhone.isEmpty ? newBuyer.phone : '$combinedPhone, ${newBuyer.phone}';
+              }
               String combinedNotes = existing.notes;
               if (newBuyer.notes.isNotEmpty && !combinedNotes.contains(newBuyer.notes)) {
                 combinedNotes = combinedNotes.isEmpty ? newBuyer.notes : '$combinedNotes | ${newBuyer.notes}';
@@ -653,7 +739,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
               final mergedBuyer = existing.copyWith(
                 email: combinedEmail,
                 website: existing.website.isEmpty ? newBuyer.website : existing.website,
-                phone: existing.phone.isEmpty ? newBuyer.phone : existing.phone,
+                phone: combinedPhone,
                 notes: combinedNotes,
               );
 

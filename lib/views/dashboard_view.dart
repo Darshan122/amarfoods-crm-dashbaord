@@ -649,9 +649,9 @@ class _DashboardViewState extends State<DashboardView> {
                           SizedBox(width: 10),
                           Expanded(flex: 3, child: Text('IMPORTER COMPANY', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w800, fontSize: 11))),
                           SizedBox(width: 10),
-                          Expanded(flex: 4, child: Text('CONTACT EMAILS', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w800, fontSize: 11))),
+                          Expanded(flex: 3, child: Text('CONTACT EMAILS', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w800, fontSize: 11))),
                           SizedBox(width: 10),
-                          Expanded(flex: 2, child: Text('CLIENT REPLY', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w800, fontSize: 11))),
+                          Expanded(flex: 3, child: Text('PHONE / WHATSAPP', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w800, fontSize: 11))),
                           SizedBox(width: 10),
                           Expanded(flex: 3, child: Text('FOLLOW-UP TRACK', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w800, fontSize: 11))),
                           SizedBox(width: 10),
@@ -865,6 +865,15 @@ class _DashboardViewState extends State<DashboardView> {
         .where((e) => e.isNotEmpty)
         .toList();
 
+    final phoneNumbers = b.phone
+        .split(RegExp(r'[,;\n]\s*'))
+        .map((p) => p.startsWith("'") ? p.substring(1).trim() : p.trim())
+        .where((p) {
+          final lower = p.toLowerCase();
+          return p.isNotEmpty && !lower.contains('#error') && lower != 'n/a' && p != '-' && lower != 'null';
+        })
+        .toList();
+
     final replyColors = <String, Color>{
       'Yes': const Color(0xFF009647),
       'Hold': const Color(0xFF64748B),
@@ -976,7 +985,7 @@ class _DashboardViewState extends State<DashboardView> {
 
           // CONTACT EMAILS
           Expanded(
-            flex: 4,
+            flex: 3,
             child: emails.isEmpty
                 ? const Text('No email',
                     style: TextStyle(
@@ -1059,8 +1068,8 @@ class _DashboardViewState extends State<DashboardView> {
                                     e.key == 0 ? 'Primary' : 'Email ${e.key + 1}',
                                     style: TextStyle(
                                       color: e.key == 0
-                                          ? const Color(0xFF15803D)
-                                          : const Color(0xFF64748B),
+                                        ? const Color(0xFF15803D)
+                                        : const Color(0xFF64748B),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 9,
                                     ),
@@ -1073,44 +1082,125 @@ class _DashboardViewState extends State<DashboardView> {
           ),
           const SizedBox(width: 10),
 
-          // CLIENT REPLY (dropdown)
+          // PHONE / WHATSAPP
           Expanded(
-            flex: 2,
-            child: Container(
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: BoxDecoration(
-                color: replyColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: replyColor.withValues(alpha: 0.25)),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  value: ['Pending', 'Yes', 'Hold', 'No Interest']
-                          .contains(b.clientReply)
-                      ? b.clientReply
-                      : 'Pending',
-                  isDense: true,
-                  style: TextStyle(
+            flex: 3,
+            child: phoneNumbers.isEmpty
+                ? Text(
+                    'No phone',
+                    style: TextStyle(
+                      color: Colors.grey.shade400,
                       fontSize: 11,
-                      color: replyColor,
-                      fontWeight: FontWeight.bold),
-                  onChanged: (val) async {
-                    if (val != null) {
-                      await p.saveBuyer(b.copyWith(clientReply: val));
-                    }
-                  },
-                  items: ['Pending', 'Yes', 'Hold', 'No Interest']
-                      .map((s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(s,
-                              style: TextStyle(color: replyColor, fontSize: 11),
-                              overflow: TextOverflow.ellipsis)))
-                      .toList(),
-                ),
-              ),
-            ),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: phoneNumbers
+                        .asMap()
+                        .entries
+                        .map((entry) {
+                          final ph = entry.value;
+                          final digits = ph.replaceAll(RegExp(r'\D'), '');
+                          final hasWa = digits.length >= 7;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.phone_outlined,
+                                    size: 12, color: Color(0xFF009647)),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    ph,
+                                    style: const TextStyle(
+                                      color: Color(0xFF0F172A),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Tooltip(
+                                  message: 'Copy phone',
+                                  child: InkWell(
+                                    onTap: () {
+                                      Clipboard.setData(ClipboardData(text: ph));
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Row(
+                                            children: [
+                                              const Icon(Icons.copy_rounded,
+                                                  color: Colors.white, size: 14),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                  child: Text('Copied $ph to clipboard!')),
+                                            ],
+                                          ),
+                                          backgroundColor: const Color(0xFF009647),
+                                          duration: const Duration(seconds: 2),
+                                          behavior: SnackBarBehavior.floating,
+                                          width: 300,
+                                        ),
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 2, vertical: 1),
+                                      child: Icon(Icons.content_copy_rounded,
+                                          size: 12, color: Color(0xFF64748B)),
+                                    ),
+                                  ),
+                                ),
+                                if (hasWa) ...[
+                                  const SizedBox(width: 4),
+                                  Tooltip(
+                                    message: 'Chat on WhatsApp',
+                                    child: InkWell(
+                                      onTap: () =>
+                                          UrlUtils.launchURL('https://wa.me/$digits'),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 4, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFDCFCE7),
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(
+                                              color: const Color(0xFF86EFAC)),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                                Icons
+                                                    .chat_bubble_outline_rounded,
+                                                size: 9,
+                                                color: Color(0xFF15803D)),
+                                            SizedBox(width: 2),
+                                            Text(
+                                              'WA',
+                                              style: TextStyle(
+                                                color: Color(0xFF15803D),
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        })
+                        .toList(),
+                  ),
           ),
           const SizedBox(width: 10),
 
@@ -1247,6 +1337,15 @@ class _DashboardViewState extends State<DashboardView> {
         .where((e) => e.isNotEmpty)
         .toList();
 
+    final phoneNumbers = b.phone
+        .split(RegExp(r'[,;\n]\s*'))
+        .map((p) => p.startsWith("'") ? p.substring(1).trim() : p.trim())
+        .where((p) {
+          final lower = p.toLowerCase();
+          return p.isNotEmpty && !lower.contains('#error') && lower != 'n/a' && p != '-' && lower != 'null';
+        })
+        .toList();
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -1361,6 +1460,72 @@ class _DashboardViewState extends State<DashboardView> {
                 ),
               )),
 
+          // Phone Numbers Column (Mobile)
+          if (phoneNumbers.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            ...phoneNumbers.map((ph) {
+              final digits = ph.replaceAll(RegExp(r'\D'), '');
+              final hasWa = digits.length >= 7;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.phone_outlined, size: 13, color: Color(0xFF009647)),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        ph,
+                        style: const TextStyle(
+                          color: Color(0xFF0F172A),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: ph));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('📋 Copied $ph'),
+                            duration: const Duration(seconds: 2),
+                            width: 220,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      child: const Icon(Icons.content_copy_rounded, size: 13, color: Color(0xFF64748B)),
+                    ),
+                    if (hasWa) ...[
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: () => UrlUtils.launchURL('https://wa.me/$digits'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFF86EFAC)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.chat_bubble_outline_rounded, size: 10, color: Color(0xFF15803D)),
+                              SizedBox(width: 2),
+                              Text('WA', style: TextStyle(color: Color(0xFF15803D), fontSize: 9, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+          ],
+
           const SizedBox(height: 8),
 
           // Date Track badges
@@ -1375,7 +1540,7 @@ class _DashboardViewState extends State<DashboardView> {
 
           const SizedBox(height: 10),
 
-          // Action Button + Reply Dropdown
+          // Action Buttons (Mobile)
           Row(
             children: [
               Expanded(
@@ -1398,30 +1563,21 @@ class _DashboardViewState extends State<DashboardView> {
                   label: Text(b.actionButtonLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                 ),
               ),
-              const SizedBox(width: 10),
-              Container(
-                height: 34,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                decoration: BoxDecoration(
-                  color: replyColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: replyColor.withValues(alpha: 0.25)),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: ['Pending', 'Yes', 'Hold', 'No Interest'].contains(b.clientReply) ? b.clientReply : 'Pending',
-                    style: TextStyle(fontSize: 11, color: replyColor, fontWeight: FontWeight.bold),
-                    onChanged: (val) async {
-                      if (val != null) {
-                        await p.saveBuyer(b.copyWith(clientReply: val));
-                      }
-                    },
-                    items: ['Pending', 'Yes', 'Hold', 'No Interest']
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s, style: TextStyle(color: replyColor, fontSize: 11))))
-                        .toList(),
+              if (phoneNumbers.isNotEmpty && phoneNumbers.first.replaceAll(RegExp(r'\D'), '').length >= 7) ...[
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF009647),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 1,
                   ),
+                  onPressed: () => UrlUtils.launchURL('https://wa.me/${phoneNumbers.first.replaceAll(RegExp(r'\D'), '')}'),
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, size: 13),
+                  label: const Text('WhatsApp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                 ),
-              ),
+              ],
             ],
           ),
         ],

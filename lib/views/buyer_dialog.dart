@@ -65,7 +65,21 @@ class _BuyerDialogState extends State<BuyerDialog> {
     }
 
     _websiteCtrl = TextEditingController(text: b?.website ?? '');
-    _phoneCtrl = TextEditingController(text: b?.phone ?? '');
+
+    String rawPhone = b?.phone ?? '';
+    if (rawPhone.startsWith("'")) rawPhone = rawPhone.substring(1).trim();
+    final lowerPhone = rawPhone.toLowerCase();
+    if (lowerPhone == '#error!' ||
+        lowerPhone.contains('#error') ||
+        lowerPhone == '#ref!' ||
+        lowerPhone == '#value!' ||
+        lowerPhone == '#n/a' ||
+        lowerPhone == 'n/a' ||
+        lowerPhone == '-' ||
+        lowerPhone == 'null') {
+      rawPhone = '';
+    }
+    _phoneCtrl = TextEditingController(text: rawPhone);
 
     String dateVal = b?.nextDueDate ?? '';
     if (dateVal.isNotEmpty) {

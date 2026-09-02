@@ -77,13 +77,27 @@ class Buyer {
       }
     }
 
+    String rawPhone = json['Phone']?.toString() ?? json['phone']?.toString() ?? '';
+    if (rawPhone.startsWith("'")) rawPhone = rawPhone.substring(1).trim();
+    final lowerPhone = rawPhone.toLowerCase();
+    if (lowerPhone == '#error!' ||
+        lowerPhone.contains('#error') ||
+        lowerPhone == '#ref!' ||
+        lowerPhone == '#value!' ||
+        lowerPhone == '#n/a' ||
+        lowerPhone == 'n/a' ||
+        lowerPhone == '-' ||
+        lowerPhone == 'null') {
+      rawPhone = '';
+    }
+
     return Buyer(
       id: formattedId,
       srNo: int.tryParse(json['SR_NO']?.toString() ?? '') ?? index,
       company: json['Company']?.toString() ?? json['Importer Company']?.toString() ?? 'Importer #$index',
       website: rawWebsite,
       email: json['Email']?.toString() ?? '',
-      phone: json['Phone']?.toString() ?? '',
+      phone: rawPhone,
       connectionMethod: json['ConnectionMethod']?.toString() ?? json['Connection Method']?.toString() ?? 'Email',
       connectionDate: connDate,
       firstEmailDate: json['FirstEmailDate']?.toString() ?? json['First Email Date']?.toString() ?? '',

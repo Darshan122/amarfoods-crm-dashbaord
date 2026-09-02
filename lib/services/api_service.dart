@@ -42,6 +42,24 @@ class ApiService {
     return 'N/A';
   }
 
+  static String cleanPhoneStr(String rawStr) {
+    if (rawStr.isEmpty) return '';
+    String s = rawStr.trim();
+    if (s.startsWith("'")) s = s.substring(1).trim();
+    final lower = s.toLowerCase();
+    if (lower == '#error!' ||
+        lower.contains('#error') ||
+        lower == '#ref!' ||
+        lower == '#value!' ||
+        lower == '#n/a' ||
+        lower == 'n/a' ||
+        lower == '-' ||
+        lower == 'null') {
+      return '';
+    }
+    return s;
+  }
+
   static String cleanEmailStr(String rawStr) {
     if (rawStr.isEmpty) return '';
     final split = rawStr.split(RegExp(r'[,;/]'));
@@ -162,7 +180,7 @@ class ApiService {
       String company = row.length > offset + 1 ? row[offset + 1].replaceAll('"', '').trim() : '';
       String rawWebsite = row.length > offset + 2 ? row[offset + 2].replaceAll('"', '').trim() : '';
       String rawEmail = row.length > offset + 3 ? row[offset + 3].replaceAll('"', '').trim() : '';
-      String phone = row.length > offset + 4 ? row[offset + 4].replaceAll('"', '').trim() : '';
+      String phone = cleanPhoneStr(row.length > offset + 4 ? row[offset + 4].replaceAll('"', '').trim() : '');
       String method = row.length > offset + 5 ? row[offset + 5].replaceAll('"', '').trim() : 'Email';
       String connDate = row.length > offset + 6 ? row[offset + 6].replaceAll('"', '').trim() : '';
       String firstEmailDate = row.length > offset + 7 ? row[offset + 7].replaceAll('"', '').trim() : '';

@@ -623,10 +623,25 @@ class BuyerProvider extends ChangeNotifier {
   }
 
   Future<bool> markEmailSent(String buyerId, {Buyer? targetBuyer}) async {
-    int index = _buyers.indexWhere((b) => b.id == buyerId);
+    int index = -1;
+    final cleanId = buyerId.trim().toLowerCase();
+    final srNoInt = int.tryParse(cleanId.replaceAll('af-', '').replaceAll(RegExp(r'^0+'), ''));
+
+    // 1. Match by numeric srNo (primary key)
+    if (srNoInt != null && srNoInt > 0) {
+      index = _buyers.indexWhere((b) => b.srNo == srNoInt);
+    }
+    // 2. Match by exact ID string
+    if (index < 0) {
+      index = _buyers.indexWhere((b) => b.id.toLowerCase() == cleanId);
+    }
+    // 3. Match by targetBuyer properties if provided
     if (index < 0 && targetBuyer != null) {
       if (targetBuyer.srNo > 0) {
         index = _buyers.indexWhere((b) => b.srNo == targetBuyer.srNo);
+      }
+      if (index < 0 && targetBuyer.id.isNotEmpty) {
+        index = _buyers.indexWhere((b) => b.id.toLowerCase() == targetBuyer.id.toLowerCase());
       }
       if (index < 0 && targetBuyer.company.trim().isNotEmpty) {
         index = _buyers.indexWhere((b) => b.company.trim().toLowerCase() == targetBuyer.company.trim().toLowerCase());
@@ -642,7 +657,7 @@ class BuyerProvider extends ChangeNotifier {
     final nextDueStr = Buyer.calculateNextDueDate(DateTime.now());
 
     final bool isInitialEmail = existing.firstEmailDate.trim().isEmpty;
-    final int updatedCount = isInitialEmail ? 0 : existing.followupCount + 1;
+    final int updatedCount = isInitialEmail ? 1 : existing.followupCount + 1;
 
     final updated = existing.copyWith(
       firstEmailDate: isInitialEmail ? todayStr : existing.firstEmailDate,
@@ -689,6 +704,7 @@ class BuyerProvider extends ChangeNotifier {
     _selectedBuyerIds.clear();
     _isLoading = false;
     _rebuildCaches(preservePage: true);
+    await _saveLocalBuyers();
     notifyListeners();
     return true;
   }
@@ -704,6 +720,23 @@ class BuyerProvider extends ChangeNotifier {
     }
     _isLoading = false;
     _rebuildCaches(preservePage: true);
+    await _saveLocalBuyers();
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> batchProcessBuyers(List<Buyer> buyers) async {
+    if (buyers.isEmpty) return false;
+
+    _isLoading = true;
+    notifyListeners();
+
+    for (var b in buyers) {
+      await markEmailSent(b.id, targetBuyer: b);
+    }
+    _isLoading = false;
+    _rebuildCaches(preservePage: true);
+    await _saveLocalBuyers();
     notifyListeners();
     return true;
   }

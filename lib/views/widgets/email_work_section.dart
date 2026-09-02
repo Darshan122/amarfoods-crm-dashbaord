@@ -270,8 +270,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                   ),
                 );
                 if (ok == true) {
-                  final ids = targetBuyers.map((b) => b.id).toList();
-                  await p.batchProcessSelectedCustom(ids);
+                  await p.batchProcessBuyers(targetBuyers);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(

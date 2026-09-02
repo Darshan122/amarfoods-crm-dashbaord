@@ -234,35 +234,37 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
               buttonText: 'Send First Email',
               isFollowup: false,
               showBatchButton: true,
+              batchLabel: 'Mark All as Sent',
               batchAction: () async {
                 final targetBuyers = firstEmailBuyers.toList();
-                for (var b in targetBuyers) {
-                  if (b.email.isNotEmpty) {
-                    await UrlUtils.launchEmailComposer(
-                      email: b.email,
-                      companyName: b.company,
-                      isFirstEmail: true,
-                      context: context,
-                    );
-                  }
-                }
-                if (!context.mounted) return;
                 final bool? ok = await showDialog<bool>(
                   context: context,
                   barrierDismissible: false,
                   builder: (ctx) => AlertDialog(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    title: const Text('Confirm Batch Action', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    content: Text('Did you complete sending first emails for all ${targetBuyers.length} companies in Outlook?'),
+                    title: Row(
+                      children: [
+                        const Icon(Icons.mark_email_read_rounded, color: Color(0xFF15803D), size: 24),
+                        const SizedBox(width: 8),
+                        const Text('Mark All as First Email Sent', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    content: Text(
+                      'This will mark all ${targetBuyers.length} buyers as "First Email Sent", '
+                      'record today\'s date as First Email Date, schedule their next follow-up in +7 days, '
+                      'and sync the updates to your Google Sheet.\n\n'
+                      'Proceed?',
+                      style: const TextStyle(fontSize: 13, color: Color(0xFF334155)),
+                    ),
                     actions: [
                       OutlinedButton(
                         onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('No, Keep in List', style: TextStyle(color: Color(0xFF64748B))),
+                        child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
                       ),
                       ElevatedButton(
                         onPressed: () => Navigator.pop(ctx, true),
                         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF15803D), foregroundColor: Colors.white),
-                        child: const Text('Yes, Mark All as Sent ✅'),
+                        child: Text('Yes, Mark All ${targetBuyers.length} as Sent ✅'),
                       ),
                     ],
                   ),
@@ -270,9 +272,25 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                 if (ok == true) {
                   final ids = targetBuyers.map((b) => b.id).toList();
                   await p.batchProcessSelectedCustom(ids);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Color(0xFF4ADE80), size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text('✅ Successfully marked all ${targetBuyers.length} buyers as Sent & scheduled follow-ups!')),
+                          ],
+                        ),
+                        backgroundColor: const Color(0xFF0F172A),
+                        duration: const Duration(seconds: 4),
+                        behavior: SnackBarBehavior.floating,
+                        width: 480,
+                      ),
+                    );
+                  }
                 }
               },
-              batchLabel: 'Send All First Emails',
             ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 80)),
@@ -1012,34 +1030,73 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
             ),
           const SizedBox(width: 8),
 
-          // Action button
-          SizedBox(
-            width: 145,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: themeColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 8),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-                elevation: 1,
+          // Action buttons (Send + Quick Mark Sent)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 125,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 1,
+                  ),
+                  onPressed: () async {
+                    await UrlUtils.handleSendEmailWithConfirmation(
+                      context: context,
+                      buyer: buyer,
+                      provider: p,
+                    );
+                  },
+                  icon: const Icon(Icons.send_rounded, size: 12),
+                  label: Text(
+                    buyer.actionButtonLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
-              onPressed: () async {
-                await UrlUtils.handleSendEmailWithConfirmation(
-                  context: context,
-                  buyer: buyer,
-                  provider: p,
-                );
-              },
-              icon: const Icon(Icons.send_rounded, size: 13),
-              label: Text(
-                buyer.actionButtonLabel,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 11),
-                overflow: TextOverflow.ellipsis,
+              const SizedBox(width: 4),
+              Tooltip(
+                message: '1-Click: Mark as Sent (If already sent in Outlook)',
+                child: InkWell(
+                  onTap: () async {
+                    await p.markEmailSent(buyer.id, targetBuyer: buyer);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.check_circle_rounded, color: Color(0xFF4ADE80), size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text('✅ Marked "${buyer.company}" as Sent & Scheduled Follow-up in 7 days')),
+                            ],
+                          ),
+                          backgroundColor: const Color(0xFF0F172A),
+                          duration: const Duration(seconds: 3),
+                          behavior: SnackBarBehavior.floating,
+                          width: 420,
+                        ),
+                      );
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    height: 32,
+                    width: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF15803D).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF15803D).withValues(alpha: 0.3)),
+                    ),
+                    child: const Icon(Icons.check_rounded, color: Color(0xFF15803D), size: 18),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),

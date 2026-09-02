@@ -288,6 +288,8 @@ class BuyerProvider extends ChangeNotifier {
         .replaceAll(RegExp(r'/+$'), '')
         .trim();
     
+    final queryDigits = query.replaceAll(RegExp(r'\D'), '');
+    
     _filteredCache = [];
     _overdueCache = [];
     _followupTodayCache = [];
@@ -306,8 +308,13 @@ class BuyerProvider extends ChangeNotifier {
       final cleanEmail = b.email.toLowerCase();
       final cleanId = b.id.toLowerCase();
       final cleanPhone = b.phone.toLowerCase();
+      final phoneDigits = b.phone.replaceAll(RegExp(r'\D'), '');
       final cleanNotes = b.notes.toLowerCase();
       final srNoStr = b.srNo.toString();
+
+      bool phoneMatch = cleanPhone.contains(query) ||
+          (queryDigits.length >= 3 && phoneDigits.contains(queryDigits)) ||
+          (queryDigits.length >= 3 && phoneDigits.isNotEmpty && queryDigits.contains(phoneDigits));
 
       bool matchesSearch = query.isEmpty ||
           cleanCompany.contains(query) ||
@@ -318,7 +325,7 @@ class BuyerProvider extends ChangeNotifier {
           (cleanQuery.isNotEmpty && cleanWeb.isNotEmpty && cleanQuery.contains(cleanWeb)) ||
           cleanId.contains(query) ||
           srNoStr == query ||
-          cleanPhone.contains(query) ||
+          phoneMatch ||
           cleanNotes.contains(query);
 
       if (!matchesSearch) continue;

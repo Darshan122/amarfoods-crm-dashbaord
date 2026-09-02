@@ -140,10 +140,22 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
     final expos = p.expos.where((e) {
       if (_searchQuery.isEmpty) return true;
       final q = _searchQuery.toLowerCase();
+      final qDigits = _searchQuery.replaceAll(RegExp(r'\D'), '');
+      bool matchesContactPhone = qDigits.length >= 3 && e.contacts.any((c) =>
+        c.phoneNumbers.any((ph) => ph.replaceAll(RegExp(r'\D'), '').contains(qDigits))
+      );
+      bool matchesContact = e.contacts.any((c) =>
+        c.companyName.toLowerCase().contains(q) ||
+        c.personName.toLowerCase().contains(q) ||
+        c.emails.any((em) => em.toLowerCase().contains(q)) ||
+        c.phoneNumbers.any((ph) => ph.toLowerCase().contains(q))
+      );
       return e.name.toLowerCase().contains(q) ||
           e.place.toLowerCase().contains(q) ||
           e.venue.toLowerCase().contains(q) ||
-          e.country.toLowerCase().contains(q);
+          e.country.toLowerCase().contains(q) ||
+          matchesContactPhone ||
+          matchesContact;
     }).toList();
 
     return Column(
@@ -213,7 +225,7 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
             controller: _searchController,
             onChanged: (val) => setState(() => _searchQuery = val.trim()),
             decoration: InputDecoration(
-              hintText: 'Search expos by name, venue, city or country...',
+              hintText: 'Search expos by name, venue, city, country, company, or phone...',
               prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B)),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
@@ -455,6 +467,12 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
     final filteredContacts = expo.contacts.where((c) {
       if (_contactSearchQuery.isEmpty) return true;
       final q = _contactSearchQuery.toLowerCase();
+      final qDigits = _contactSearchQuery.replaceAll(RegExp(r'\D'), '');
+      bool matchesPhone = c.phoneNumbers.any((ph) {
+        final phLower = ph.toLowerCase();
+        final phDigits = ph.replaceAll(RegExp(r'\D'), '');
+        return phLower.contains(q) || (qDigits.length >= 3 && phDigits.contains(qDigits));
+      });
       return c.companyName.toLowerCase().contains(q) ||
           c.personName.toLowerCase().contains(q) ||
           c.personPosition.toLowerCase().contains(q) ||
@@ -465,7 +483,7 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
           c.address.toLowerCase().contains(q) ||
           c.venueAddress.toLowerCase().contains(q) ||
           c.emails.any((e) => e.toLowerCase().contains(q)) ||
-          c.phoneNumbers.any((ph) => ph.toLowerCase().contains(q));
+          matchesPhone;
     }).toList();
 
     return Column(

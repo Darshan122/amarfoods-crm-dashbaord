@@ -8,7 +8,7 @@ class TemplateService extends ChangeNotifier {
   factory TemplateService() => _instance;
   TemplateService._internal();
 
-  static const String _storageKey = 'amar_crm_email_templates';
+  static const String _storageKey = 'amar_crm_email_templates_v2';
   List<EmailTemplate> _templates = [];
 
   List<EmailTemplate> get templates => List.unmodifiable(_templates);
@@ -63,9 +63,12 @@ Looking forward to hearing from you and building a long-term business relationsh
 
 Warm regards,
 
-Export Sales Team
+Darshan Zalavadiya
+Export Sales Executive
 Amar Foods | India
-Dehydrated Onion & Garlic Specialists''',
+📞 Phone / WhatsApp: +91 7284088737
+📧 Email: export@amarfoods.in
+🌐 Website: https://amarfoods.in/''',
         isDefault: true,
       ),
       EmailTemplate(
@@ -81,9 +84,14 @@ We specialize in exporting high-quality Dehydrated Onion, Garlic, and Food Produ
 
 Could you please share your current purchasing requirements or connect us with your procurement manager?
 
-Best regards,
-Amar Foods Export Division
-Dehydrated Onion & Garlic Specialist''',
+Warm regards,
+
+Darshan Zalavadiya
+Export Sales Executive
+Amar Foods | India
+📞 Phone / WhatsApp: +91 7284088737
+📧 Email: export@amarfoods.in
+🌐 Website: https://amarfoods.in/''',
         isDefault: true,
       ),
       EmailTemplate(
@@ -99,8 +107,14 @@ I am following up on our previous communication regarding Dehydrated Onion & Gar
 
 Please let us know if you have any questions or require updated product specifications, catalog, or pricing for {company}.
 
-Best regards,
-Amar Foods Export Division''',
+Warm regards,
+
+Darshan Zalavadiya
+Export Sales Executive
+Amar Foods | India
+📞 Phone / WhatsApp: +91 7284088737
+📧 Email: export@amarfoods.in
+🌐 Website: https://amarfoods.in/''',
         isDefault: true,
       ),
       EmailTemplate(
@@ -116,8 +130,14 @@ We would be happy to share our latest product catalog and custom FOB/CIF pricing
 
 Looking forward to your feedback.
 
-Best regards,
-Amar Foods Export Division''',
+Warm regards,
+
+Darshan Zalavadiya
+Export Sales Executive
+Amar Foods | India
+📞 Phone / WhatsApp: +91 7284088737
+📧 Email: export@amarfoods.in
+🌐 Website: https://amarfoods.in/''',
         isDefault: true,
       ),
       EmailTemplate(
@@ -131,8 +151,14 @@ Checking in to see if {company} has any upcoming requirements for Dehydrated Oni
 
 We offer premium export quality with competitive bulk pricing. Please let us know if we can assist with a sample order.
 
-Best regards,
-Amar Foods Export Division''',
+Warm regards,
+
+Darshan Zalavadiya
+Export Sales Executive
+Amar Foods | India
+📞 Phone / WhatsApp: +91 7284088737
+📧 Email: export@amarfoods.in
+🌐 Website: https://amarfoods.in/''',
         isDefault: true,
       ),
     ];

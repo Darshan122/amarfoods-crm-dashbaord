@@ -8,7 +8,7 @@ class TemplateService extends ChangeNotifier {
   factory TemplateService() => _instance;
   TemplateService._internal();
 
-  static const String _storageKey = 'amar_crm_email_templates_v2';
+  static const String _storageKey = 'amar_crm_email_templates_v3';
   List<EmailTemplate> _templates = [];
 
   List<EmailTemplate> get templates => List.unmodifiable(_templates);
@@ -43,32 +43,31 @@ class TemplateService extends ChangeNotifier {
         id: 'tpl_expo_first_email',
         name: 'Expo First Email (Stall Visit Follow-up)',
         type: 'expo_first_email',
-        subject: 'Great meeting you at {expo_name} | Amar Foods — Product Catalog & Collaboration',
+        subject: 'Pleasure meeting you at {expo_name} | Amar Foods — Product Catalog & Collaboration',
         body: '''Dear {contact_person},
 
-I hope this email finds you well.
+Greetings from Amar Foods!
 
-It was a real pleasure visiting your stall {stall_number} at {expo_name} on {expo_date}. We truly appreciated the brief discussion regarding {company} and your current business activities.
+I hope this message finds you well.
 
-By way of introduction, I represent Amar Foods (India). We are a premier manufacturer & exporter specializing in high-quality:
- • Dehydrated Onion (Flakes, Minced, Chopped, Powder)
- • Dehydrated Garlic (Flakes, Granules, Powder)
- • Spices & Agro Food Products
+It was a real pleasure meeting you at {expo_name} on {expo_date}, and I would like to express my sincere gratitude for the engaging discussion we had regarding potential collaborations and business opportunities in the industry.
 
-As discussed at the expo, I have attached our latest Product Catalog & Company Brochure for your review. 
+As we discussed regarding our premium quality Dehydrated Food Products — including Dehydrated Onion (Flakes, Minced, Chopped, Powder), Dehydrated Garlic (Granules, Powder), and Agro Spices — we are enthusiastic about exploring ways to work together and cater to {company}'s requirements.
 
-We would be delighted to explore supply and partnership opportunities with {company}. Could you please let us know if you have any ongoing or upcoming requirements? We would be very happy to share customized pricing (FOB / CIF) and dispatch product samples for your quality evaluation.
+As discussed at the event, I have attached our latest Product Catalog & Company Profile for your review.
 
-Looking forward to hearing from you and building a long-term business relationship.
+Please let me know if you require any additional information, product specifications, or custom pricing (FOB / CIF). We would also be very glad to dispatch product samples for your quality evaluation. I look forward to your response and hope to continue our conversation soon.
 
-Warm regards,
+Thank you once again for your valuable time and insights. We truly believe in exceptional product quality, consistency, and long-term customer assurance.
+
+Thanks & Regards,
 
 Darshan Zalavadiya
 Export Sales Executive
 Amar Foods | India
-📞 Phone / WhatsApp: +91 7284088737
-📧 Email: export@amarfoods.in
-🌐 Website: https://amarfoods.in/''',
+Mob / WhatsApp: +91 7284088737
+Email: export@amarfoods.in
+Website: https://amarfoods.in/''',
         isDefault: true,
       ),
       EmailTemplate(

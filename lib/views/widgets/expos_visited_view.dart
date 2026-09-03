@@ -527,6 +527,36 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (expo.contacts.isNotEmpty) ...[
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final int syncedCount = await p.batchSyncExpoContactsToBuyers(expo);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('🎉 Synced $syncedCount contact(s) to Buyer CRM & Daily Follow-ups!'),
+                              backgroundColor: const Color(0xFF0F172A),
+                              duration: const Duration(seconds: 4),
+                              behavior: SnackBarBehavior.floating,
+                              width: 440,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.sync_rounded, size: 16, color: Color(0xFF15803D)),
+                      label: Text(
+                        isMobile ? 'Sync CRM' : 'Sync All to Buyer CRM (${expo.contacts.length})',
+                        style: const TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFF86EFAC)),
+                        backgroundColor: const Color(0xFFF0FDF4),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   ElevatedButton.icon(
                     onPressed: () => _showAddEditContactDialog(context, p, expo.id),
                     icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
@@ -1011,6 +1041,209 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                 ),
               ),
             ],
+
+            const SizedBox(height: 14),
+            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+            const SizedBox(height: 12),
+
+            // ─── CRM FOLLOW-UP & STATUS BRIDGE ───
+            Builder(
+              builder: (context) {
+                final linkedBuyer = p.findBuyerForExpoContact(contact);
+                final bool isInCrm = linkedBuyer != null;
+
+                if (isInCrm) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 16),
+                            const SizedBox(width: 6),
+                            Text(
+                              'In Buyer CRM (Sr. No: ${linkedBuyer.srNo})',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF15803D)),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF15803D).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                linkedBuyer.status,
+                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF15803D)),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            if (linkedBuyer.firstEmailDate.isNotEmpty)
+                              Text(
+                                '• Follow-up Due: ${linkedBuyer.nextDueDate}',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF475569)),
+                              )
+                            else
+                              const Text(
+                                '• First Outreach Pending',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFFB45309)),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            // 1. Send Follow-up Email Button
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                if (contact.emails.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('No email address available for this company.')),
+                                  );
+                                  return;
+                                }
+                                await UrlUtils.handleSendEmailWithConfirmation(
+                                  context: context,
+                                  buyer: linkedBuyer,
+                                  provider: p,
+                                );
+                              },
+                              icon: const Icon(Icons.send_rounded, size: 13),
+                              label: Text(
+                                linkedBuyer.firstEmailDate.isEmpty ? 'Send First Email' : 'Send Follow-Up #${linkedBuyer.nextFollowupStep}',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF8B2C69),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                elevation: 0,
+                              ),
+                            ),
+                            // 2. Quick 1-Click Mark Sent
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                await p.markEmailSent(linkedBuyer.id, targetBuyer: linkedBuyer);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          const Icon(Icons.check_circle_rounded, color: Color(0xFF4ADE80), size: 18),
+                                          const SizedBox(width: 8),
+                                          Expanded(child: Text('✅ Marked "${linkedBuyer.company}" as Sent & Scheduled Next Follow-up in 7 days')),
+                                        ],
+                                      ),
+                                      backgroundColor: const Color(0xFF0F172A),
+                                      duration: const Duration(seconds: 3),
+                                      behavior: SnackBarBehavior.floating,
+                                      width: 420,
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.check_rounded, size: 13, color: Color(0xFF15803D)),
+                              label: const Text('✓ Mark Sent', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Color(0xFF86EFAC)),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                              ),
+                            ),
+                            // 3. View in CRM
+                            TextButton.icon(
+                              onPressed: () {
+                                p.setActiveTab(MainTab.allImporters);
+                                p.setSearchQuery(contact.companyName);
+                              },
+                              icon: const Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF0284C7)),
+                              label: const Text('View in CRM ↗', style: TextStyle(fontSize: 11, color: Color(0xFF0284C7), fontWeight: FontWeight.w600)),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  // Not yet in CRM -> Offer 1-Click Add & Email
+                  final expo = p.expos.firstWhere((e) => e.id == expoId);
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.add_task_rounded, color: Color(0xFF64748B), size: 16),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Not added to Daily Follow-up Queue yet',
+                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final newBuyer = await p.convertExpoContactToBuyer(contact, expo);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      const Icon(Icons.celebration_rounded, color: Color(0xFFFDE047), size: 18),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: Text('🎉 Added "${contact.companyName}" to Buyer CRM & Daily Work Area!')),
+                                    ],
+                                  ),
+                                  action: SnackBarAction(
+                                    label: 'Send Email Now',
+                                    textColor: const Color(0xFF4ADE80),
+                                    onPressed: () {
+                                      UrlUtils.handleSendEmailWithConfirmation(
+                                        context: context,
+                                        buyer: newBuyer,
+                                        provider: p,
+                                      );
+                                    },
+                                  ),
+                                  backgroundColor: const Color(0xFF0F172A),
+                                  duration: const Duration(seconds: 5),
+                                  behavior: SnackBarBehavior.floating,
+                                  width: 480,
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.add_circle_outline_rounded, size: 14),
+                          label: const Text('➕ Add to Buyer CRM & Follow-ups', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF8B2C69),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              },
+            ),
           ],
         ),
       ),

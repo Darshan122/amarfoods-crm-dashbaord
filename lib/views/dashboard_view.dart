@@ -874,14 +874,6 @@ class _DashboardViewState extends State<DashboardView> {
         })
         .toList();
 
-    final replyColors = <String, Color>{
-      'Yes': const Color(0xFF009647),
-      'Hold': const Color(0xFF64748B),
-      'No Interest': const Color(0xFFE11D48),
-      'Pending': const Color(0xFFD97706),
-    };
-    final replyColor = replyColors[b.clientReply] ?? const Color(0xFF475569);
-
     return Container(
       decoration: BoxDecoration(
         color: idx.isEven ? Colors.white : const Color(0xFFFAFAFC),
@@ -950,6 +942,27 @@ class _DashboardViewState extends State<DashboardView> {
                         ),
                       ),
                     ),
+                    if (b.connectionMethod.toLowerCase().contains('expo')) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF8B2C69).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFF8B2C69).withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          '🎪 ${b.connectionMethod.replaceAll('Expo - ', '').trim()}',
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF8B2C69),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 if (b.website.isNotEmpty && b.website != 'N/A')
@@ -1326,11 +1339,6 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   Widget _buildMobileTableRow(Buyer b, int index, int total, BuyerProvider p) {
-    Color replyColor = const Color(0xFF64748B);
-    if (b.clientReply == 'Yes') replyColor = const Color(0xFF009647);
-    if (b.clientReply == 'Hold') replyColor = const Color(0xFFD97706);
-    if (b.clientReply == 'No Interest') replyColor = const Color(0xFFE11D48);
-
     final emails = b.email
         .split(',')
         .map((e) => e.trim())
@@ -1377,11 +1385,38 @@ class _DashboardViewState extends State<DashboardView> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  b.company,
-                  style: const TextStyle(color: Color(0xFF8B2C69), fontWeight: FontWeight.bold, fontSize: 14),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        b.company,
+                        style: const TextStyle(color: Color(0xFF8B2C69), fontWeight: FontWeight.bold, fontSize: 14),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (b.connectionMethod.toLowerCase().contains('expo')) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF8B2C69).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFF8B2C69).withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          '🎪 ${b.connectionMethod.replaceAll('Expo - ', '').trim()}',
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF8B2C69),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               InkWell(

@@ -882,6 +882,27 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                         ),
                       ),
                     ),
+                    if (buyer.connectionMethod.toLowerCase().contains('expo')) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF8B2C69).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFF8B2C69).withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          '🎪 ${buyer.connectionMethod.replaceAll('Expo - ', '').trim()}',
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF8B2C69),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 if (buyer.website.isNotEmpty && buyer.website != 'N/A')

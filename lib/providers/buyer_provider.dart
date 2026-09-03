@@ -248,6 +248,86 @@ class BuyerProvider extends ChangeNotifier {
     }
   }
 
+  /// Check if an Expo contact already exists in Buyer CRM.
+  Buyer? findBuyerForExpoContact(ExpoContact contact) {
+    final cleanComp = contact.companyName.trim().toLowerCase();
+    if (cleanComp.isNotEmpty) {
+      final match = _buyers.where((b) => b.company.trim().toLowerCase() == cleanComp).toList();
+      if (match.isNotEmpty) return match.first;
+    }
+    for (final em in contact.emails) {
+      final cleanEm = em.trim().toLowerCase();
+      if (cleanEm.isNotEmpty && cleanEm.contains('@')) {
+        final match = _buyers.where((b) => b.email.toLowerCase().contains(cleanEm)).toList();
+        if (match.isNotEmpty) return match.first;
+      }
+    }
+    return null;
+  }
+
+  /// Convert/Sync an Expo Contact into a Buyer Lead in the CRM & Daily Work Area
+  Future<Buyer> convertExpoContactToBuyer(ExpoContact contact, ExpoItem expo) async {
+    final existing = findBuyerForExpoContact(contact);
+    if (existing != null) {
+      return existing;
+    }
+
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final bool isDomestic = contact.country.trim().toLowerCase().contains('india') ||
+        contact.city.trim().toLowerCase().contains('mumbai') ||
+        contact.city.trim().toLowerCase().contains('delhi') ||
+        contact.city.trim().toLowerCase().contains('bangalore') ||
+        contact.city.trim().toLowerCase().contains('ahmedabad');
+
+    final List<String> notesParts = [];
+    if (contact.personName.isNotEmpty || contact.personPosition.isNotEmpty) {
+      notesParts.add('Met: ${[contact.personName, contact.personPosition].where((s) => s.isNotEmpty).join(' - ')}');
+    }
+    if (contact.venueAddress.isNotEmpty) {
+      notesParts.add('Booth: ${contact.venueAddress}');
+    }
+    if (contact.companyDetails.isNotEmpty) {
+      notesParts.add(contact.companyDetails);
+    }
+
+    final newBuyer = Buyer(
+      id: '',
+      srNo: 0,
+      company: contact.companyName.trim(),
+      website: contact.companyWebsite.trim(),
+      email: contact.emails.join(', '),
+      phone: contact.phoneNumbers.join(', '),
+      connectionMethod: 'Expo - ${expo.name.trim()}',
+      connectionDate: expo.expoDate.trim().isNotEmpty ? expo.expoDate.trim() : todayStr,
+      firstEmailDate: '',
+      nextDueDate: todayStr,
+      clientReply: 'Pending',
+      lastEmailDate: '',
+      followupCount: 0,
+      status: 'New',
+      nextAction: 'First Email (Expo Lead)',
+      notes: notesParts.join(' | '),
+      marketType: isDomestic ? 'Domestic' : 'International',
+    );
+
+    await saveBuyer(newBuyer);
+    final saved = findBuyerForExpoContact(contact) ?? newBuyer;
+    return saved;
+  }
+
+  /// Batch sync all contacts from an Expo into Buyer CRM
+  Future<int> batchSyncExpoContactsToBuyers(ExpoItem expo) async {
+    int count = 0;
+    for (final contact in expo.contacts) {
+      final existing = findBuyerForExpoContact(contact);
+      if (existing == null) {
+        await convertExpoContactToBuyer(contact, expo);
+        count++;
+      }
+    }
+    return count;
+  }
+
   Future<void> loadBuyers({bool forceRefresh = false}) async {
     _isLoading = true;
     _errorMessage = null;

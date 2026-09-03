@@ -106,6 +106,11 @@ class UrlUtils {
     required bool isFirstEmail,
     int followupCount = 0,
     BuildContext? context,
+    bool isExpoEmail = false,
+    String? expoName,
+    String? expoDate,
+    String? stallNumber,
+    String? contactPerson,
   }) async {
     // Parse all email addresses stored for this company
     final List<String> allEmails = email
@@ -121,19 +126,31 @@ class UrlUtils {
     if (!templateService.isInitialized) {
       await templateService.init();
     }
+    final String templateType = isExpoEmail
+        ? 'expo_first_email'
+        : (isFirstEmail ? 'first_email' : 'followup');
+
     final EmailTemplate template = templateService.getTemplateForType(
-      isFirstEmail ? 'first_email' : 'followup',
+      templateType,
       followupCount,
     );
     final String subject = TemplateService.processPlaceholders(
       template.subject,
       company: companyName,
       followupCount: followupCount,
+      expoName: expoName,
+      expoDate: expoDate,
+      stallNumber: stallNumber,
+      contactPerson: contactPerson,
     );
     final String body = TemplateService.processPlaceholders(
       template.body,
       company: companyName,
       followupCount: followupCount,
+      expoName: expoName,
+      expoDate: expoDate,
+      stallNumber: stallNumber,
+      contactPerson: contactPerson,
     );
 
     // ── SINGLE EMAIL: open Outlook directly, no dialog needed ──────────────
@@ -360,18 +377,49 @@ class UrlUtils {
     required BuildContext context,
     required Buyer buyer,
     required BuyerProvider provider,
+    bool? isExpoEmail,
+    String? expoName,
+    String? expoDate,
+    String? stallNumber,
+    String? contactPerson,
   }) async {
     // Keep a copy of the buyer before any mutation
     final previousBuyer = buyer;
+
+    final isInitialEmail = buyer.firstEmailDate.trim().isEmpty;
+    final bool useExpoTemplate = isExpoEmail ?? (buyer.connectionMethod.toLowerCase().contains('expo') && isInitialEmail);
+
+    String? derivedExpoName = expoName;
+    if (derivedExpoName == null && buyer.connectionMethod.toLowerCase().contains('expo')) {
+      derivedExpoName = buyer.connectionMethod.replaceAll('Expo - ', '').replaceAll('Expo', '').trim();
+    }
+
+    String? derivedPerson = contactPerson;
+    String? derivedStall = stallNumber;
+    if (buyer.notes.isNotEmpty) {
+      if (derivedPerson == null && buyer.notes.contains('Met:')) {
+        final match = RegExp(r'Met:\s*([^|\]]+)').firstMatch(buyer.notes);
+        if (match != null) derivedPerson = match.group(1)?.trim();
+      }
+      if (derivedStall == null && buyer.notes.contains('Booth:')) {
+        final match = RegExp(r'Booth:\s*([^|\]]+)').firstMatch(buyer.notes);
+        if (match != null) derivedStall = match.group(1)?.trim();
+      }
+    }
 
     // 1. Launch Outlook compose window(s)
     if (buyer.email.isNotEmpty) {
       await launchEmailComposer(
         email: buyer.email,
         companyName: buyer.company,
-        isFirstEmail: buyer.firstEmailDate.trim().isEmpty,
+        isFirstEmail: isInitialEmail,
         followupCount: buyer.nextFollowupStep,
         context: context,
+        isExpoEmail: useExpoTemplate,
+        expoName: derivedExpoName,
+        expoDate: expoDate ?? buyer.connectionDate,
+        stallNumber: derivedStall,
+        contactPerson: derivedPerson,
       );
     }
 

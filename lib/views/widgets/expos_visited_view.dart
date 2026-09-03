@@ -842,9 +842,25 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Tooltip(
-                                  message: 'Send Email',
+                                  message: 'Send Expo Email',
                                   child: InkWell(
-                                    onTap: () => UrlUtils.launchEmail(e),
+                                    onTap: () {
+                                      final currentExpo = p.expos.firstWhere(
+                                        (x) => x.id == expoId,
+                                        orElse: () => ExpoItem(id: expoId, name: 'Expo'),
+                                      );
+                                      UrlUtils.launchEmailComposer(
+                                        email: e,
+                                        companyName: contact.companyName,
+                                        isFirstEmail: true,
+                                        isExpoEmail: true,
+                                        expoName: currentExpo.name,
+                                        expoDate: currentExpo.expoDate,
+                                        stallNumber: contact.venueAddress,
+                                        contactPerson: contact.personName,
+                                        context: context,
+                                      );
+                                    },
                                     child: Text(
                                       e,
                                       style: const TextStyle(
@@ -1110,10 +1126,19 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                                   );
                                   return;
                                 }
+                                final currentExpo = p.expos.firstWhere(
+                                  (x) => x.id == expoId,
+                                  orElse: () => ExpoItem(id: expoId, name: 'Expo'),
+                                );
                                 await UrlUtils.handleSendEmailWithConfirmation(
                                   context: context,
                                   buyer: linkedBuyer,
                                   provider: p,
+                                  isExpoEmail: linkedBuyer.firstEmailDate.isEmpty,
+                                  expoName: currentExpo.name,
+                                  expoDate: currentExpo.expoDate,
+                                  stallNumber: contact.venueAddress,
+                                  contactPerson: contact.personName,
                                 );
                               },
                               icon: const Icon(Icons.send_rounded, size: 13),
@@ -1217,6 +1242,11 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                                         context: context,
                                         buyer: newBuyer,
                                         provider: p,
+                                        isExpoEmail: true,
+                                        expoName: expo.name,
+                                        expoDate: expo.expoDate,
+                                        stallNumber: contact.venueAddress,
+                                        contactPerson: contact.personName,
                                       );
                                     },
                                   ),

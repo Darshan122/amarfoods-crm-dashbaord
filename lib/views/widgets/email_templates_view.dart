@@ -141,6 +141,7 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                                       value: selectedType,
                                       isExpanded: true,
                                       items: const [
+                                        DropdownMenuItem(value: 'expo_first_email', child: Text('🎪 Expo First Email')),
                                         DropdownMenuItem(value: 'first_email', child: Text('First Email')),
                                         DropdownMenuItem(value: 'followup_1', child: Text('Follow-Up 1')),
                                         DropdownMenuItem(value: 'followup_2', child: Text('Follow-Up 2')),
@@ -168,10 +169,12 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        child: Row(
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            const Text('Insert Variable Tag:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
-                            const SizedBox(width: 10),
+                            const Text('Insert Tags:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
                             ActionChip(
                               label: const Text('+ {company}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
                               backgroundColor: const Color(0xFFEFF6FF),
@@ -181,7 +184,42 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                                 });
                               },
                             ),
-                            const SizedBox(width: 8),
+                            ActionChip(
+                              label: const Text('+ {contact_person}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
+                              backgroundColor: const Color(0xFFE0F2FE),
+                              onPressed: () {
+                                setDialogState(() {
+                                  bodyCtrl.text = '${bodyCtrl.text} {contact_person}';
+                                });
+                              },
+                            ),
+                            ActionChip(
+                              label: const Text('+ {expo_name}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8B2C69))),
+                              backgroundColor: const Color(0xFFFDF4FF),
+                              onPressed: () {
+                                setDialogState(() {
+                                  bodyCtrl.text = '${bodyCtrl.text} {expo_name}';
+                                });
+                              },
+                            ),
+                            ActionChip(
+                              label: const Text('+ {expo_date}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+                              backgroundColor: const Color(0xFFD1FAE5),
+                              onPressed: () {
+                                setDialogState(() {
+                                  bodyCtrl.text = '${bodyCtrl.text} {expo_date}';
+                                });
+                              },
+                            ),
+                            ActionChip(
+                              label: const Text('+ {stall_number}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+                              backgroundColor: const Color(0xFFEDE9FE),
+                              onPressed: () {
+                                setDialogState(() {
+                                  bodyCtrl.text = '${bodyCtrl.text} {stall_number}';
+                                });
+                              },
+                            ),
                             ActionChip(
                               label: const Text('+ {followup_count}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD97706))),
                               backgroundColor: const Color(0xFFFEF3C7),
@@ -401,7 +439,10 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                       Color badgeColor = const Color(0xFF2563EB);
                       Color badgeBg = const Color(0xFFEFF6FF);
 
-                      if (t.type == 'first_email') {
+                      if (t.type == 'expo_first_email') {
+                        badgeColor = const Color(0xFF0284C7);
+                        badgeBg = const Color(0xFFE0F2FE);
+                      } else if (t.type == 'first_email') {
                         badgeColor = const Color(0xFF8B2C69);
                         badgeBg = const Color(0xFFFDF4FF);
                       } else if (t.type == 'followup_1') {

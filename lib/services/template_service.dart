@@ -40,6 +40,35 @@ class TemplateService extends ChangeNotifier {
   static List<EmailTemplate> getDefaultTemplates() {
     return [
       EmailTemplate(
+        id: 'tpl_expo_first_email',
+        name: 'Expo First Email (Stall Visit Follow-up)',
+        type: 'expo_first_email',
+        subject: 'Great meeting you at {expo_name} | Amar Foods — Product Catalog & Collaboration',
+        body: '''Dear {contact_person},
+
+I hope this email finds you well.
+
+It was a real pleasure visiting your stall {stall_number} at {expo_name} on {expo_date}. We truly appreciated the brief discussion regarding {company} and your current business activities.
+
+By way of introduction, I represent Amar Foods (India). We are a premier manufacturer & exporter specializing in high-quality:
+ • Dehydrated Onion (Flakes, Minced, Chopped, Powder)
+ • Dehydrated Garlic (Flakes, Granules, Powder)
+ • Spices & Agro Food Products
+
+As discussed at the expo, I have attached our latest Product Catalog & Company Brochure for your review. 
+
+We would be delighted to explore supply and partnership opportunities with {company}. Could you please let us know if you have any ongoing or upcoming requirements? We would be very happy to share customized pricing (FOB / CIF) and dispatch product samples for your quality evaluation.
+
+Looking forward to hearing from you and building a long-term business relationship.
+
+Warm regards,
+
+Export Sales Team
+Amar Foods | India
+Dehydrated Onion & Garlic Specialists''',
+        isDefault: true,
+      ),
+      EmailTemplate(
         id: 'tpl_first_email',
         name: 'First Email (Initial Outreach)',
         type: 'first_email',
@@ -114,10 +143,15 @@ Amar Foods Export Division''',
       _templates = getDefaultTemplates();
     }
 
-    if (type == 'first_email') {
+    if (type == 'expo_first_email') {
+      return _templates.firstWhere(
+        (t) => t.type == 'expo_first_email',
+        orElse: () => getDefaultTemplates().firstWhere((t) => t.type == 'expo_first_email'),
+      );
+    } else if (type == 'first_email') {
       return _templates.firstWhere(
         (t) => t.type == 'first_email',
-        orElse: () => getDefaultTemplates()[0],
+        orElse: () => getDefaultTemplates().firstWhere((t) => t.type == 'first_email'),
       );
     } else {
       if (followupCount == 1) {
@@ -125,18 +159,18 @@ Amar Foods Export Division''',
           (t) => t.type == 'followup_1',
           orElse: () => _templates.firstWhere(
             (t) => t.type == 'first_email',
-            orElse: () => getDefaultTemplates()[1],
+            orElse: () => getDefaultTemplates()[2],
           ),
         );
       } else if (followupCount == 2) {
         return _templates.firstWhere(
           (t) => t.type == 'followup_2',
-          orElse: () => getDefaultTemplates()[2],
+          orElse: () => getDefaultTemplates()[3],
         );
       } else {
         return _templates.firstWhere(
           (t) => t.type == 'followup_3',
-          orElse: () => getDefaultTemplates()[3],
+          orElse: () => getDefaultTemplates()[4],
         );
       }
     }
@@ -184,10 +218,25 @@ Amar Foods Export Division''',
   static String processPlaceholders(String text, {
     required String company,
     required int followupCount,
+    String? expoName,
+    String? expoDate,
+    String? stallNumber,
+    String? contactPerson,
   }) {
-    String cleanCompany = company.isNotEmpty ? company : 'Importer';
+    String cleanCompany = company.isNotEmpty ? company : 'Valued Partner';
+    String cleanExpoName = (expoName != null && expoName.trim().isNotEmpty) ? expoName.trim() : 'the exhibition';
+    String cleanExpoDate = (expoDate != null && expoDate.trim().isNotEmpty) ? expoDate.trim() : 'recent event';
+    String cleanStall = (stallNumber != null && stallNumber.trim().isNotEmpty) ? '(${stallNumber.trim()})' : '';
+    String cleanPerson = (contactPerson != null && contactPerson.trim().isNotEmpty)
+        ? contactPerson.trim()
+        : 'Purchasing & Procurement Team ($cleanCompany)';
+
     return text
         .replaceAll(RegExp(r'\{\{?\s*company\s*\}?\}', caseSensitive: false), cleanCompany)
-        .replaceAll(RegExp(r'\{\{?\s*followup_count\s*\}?\}', caseSensitive: false), followupCount > 0 ? followupCount.toString() : '1');
+        .replaceAll(RegExp(r'\{\{?\s*followup_count\s*\}?\}', caseSensitive: false), followupCount > 0 ? followupCount.toString() : '1')
+        .replaceAll(RegExp(r'\{\{?\s*expo_name\s*\}?\}', caseSensitive: false), cleanExpoName)
+        .replaceAll(RegExp(r'\{\{?\s*expo_date\s*\}?\}', caseSensitive: false), cleanExpoDate)
+        .replaceAll(RegExp(r'\{\{?\s*stall_number\s*\}?\}', caseSensitive: false), cleanStall)
+        .replaceAll(RegExp(r'\{\{?\s*contact_person\s*\}?\}', caseSensitive: false), cleanPerson);
   }
 }

@@ -249,19 +249,30 @@ Amar Foods | India
     String? contactPerson,
   }) {
     String cleanCompany = company.isNotEmpty ? company : 'Valued Partner';
-    String cleanExpoName = (expoName != null && expoName.trim().isNotEmpty) ? expoName.trim() : 'the exhibition';
-    String cleanExpoDate = (expoDate != null && expoDate.trim().isNotEmpty) ? expoDate.trim() : 'recent event';
+    String cleanExpoName = (expoName != null && expoName.trim().isNotEmpty) ? expoName.trim() : 'FI India 2026';
+    String cleanExpoDate = (expoDate != null && expoDate.trim().isNotEmpty) ? expoDate.trim() : '';
     String cleanStall = (stallNumber != null && stallNumber.trim().isNotEmpty) ? '(${stallNumber.trim()})' : '';
     String cleanPerson = (contactPerson != null && contactPerson.trim().isNotEmpty)
         ? contactPerson.trim()
-        : 'Purchasing & Procurement Team ($cleanCompany)';
+        : 'Sir / Madam';
 
-    return text
+    String processed = text
         .replaceAll(RegExp(r'\{\{?\s*company\s*\}?\}', caseSensitive: false), cleanCompany)
         .replaceAll(RegExp(r'\{\{?\s*followup_count\s*\}?\}', caseSensitive: false), followupCount > 0 ? followupCount.toString() : '1')
         .replaceAll(RegExp(r'\{\{?\s*expo_name\s*\}?\}', caseSensitive: false), cleanExpoName)
-        .replaceAll(RegExp(r'\{\{?\s*expo_date\s*\}?\}', caseSensitive: false), cleanExpoDate)
         .replaceAll(RegExp(r'\{\{?\s*stall_number\s*\}?\}', caseSensitive: false), cleanStall)
         .replaceAll(RegExp(r'\{\{?\s*contact_person\s*\}?\}', caseSensitive: false), cleanPerson);
+
+    if (cleanExpoDate.isNotEmpty) {
+      processed = processed.replaceAll(RegExp(r'\{\{?\s*expo_date\s*\}?\}', caseSensitive: false), cleanExpoDate);
+      processed = processed.replaceAll(RegExp(r'on\s+recent\s+event', caseSensitive: false), 'on $cleanExpoDate');
+    } else {
+      processed = processed
+          .replaceAll(RegExp(r'\s*on\s*\{\{?\s*expo_date\s*\}?\}', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\{\{?\s*expo_date\s*\}?\}', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s*on\s+recent\s+event', caseSensitive: false), '');
+    }
+
+    return processed;
   }
 }

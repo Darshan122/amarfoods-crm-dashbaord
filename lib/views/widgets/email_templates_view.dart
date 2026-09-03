@@ -46,11 +46,19 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
               subjectCtrl.text,
               company: 'Pacific Spice Co.',
               followupCount: 1,
+              expoName: 'FI India 2026',
+              expoDate: 'August 2026',
+              stallNumber: 'Booth H4-B12',
+              contactPerson: 'Mr. Rajesh Patel',
             );
             final sampleBody = TemplateService.processPlaceholders(
               bodyCtrl.text,
               company: 'Pacific Spice Co.',
               followupCount: 1,
+              expoName: 'FI India 2026',
+              expoDate: 'August 2026',
+              stallNumber: 'Booth H4-B12',
+              contactPerson: 'Mr. Rajesh Patel',
             );
 
             return Dialog(

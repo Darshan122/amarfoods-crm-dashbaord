@@ -389,9 +389,9 @@ class UrlUtils {
     final isInitialEmail = buyer.firstEmailDate.trim().isEmpty;
     final bool useExpoTemplate = isExpoEmail ?? (buyer.connectionMethod.toLowerCase().contains('expo') && isInitialEmail);
 
-    String? derivedExpoName = expoName;
+    String? derivedExpoName = (expoName != null && expoName.trim().isNotEmpty) ? expoName.trim() : null;
     if (derivedExpoName == null && buyer.connectionMethod.toLowerCase().contains('expo')) {
-      derivedExpoName = buyer.connectionMethod.replaceAll('Expo - ', '').replaceAll('Expo', '').trim();
+      derivedExpoName = buyer.connectionMethod.replaceAll(RegExp(r'^Expo\s*[-–:]\s*', caseSensitive: false), '').trim();
     }
 
     String? derivedPerson = contactPerson;

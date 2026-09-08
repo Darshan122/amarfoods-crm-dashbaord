@@ -5,9 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/buyer.dart';
 import '../models/expo.dart';
+import '../models/product_price.dart';
 import '../services/api_service.dart';
 
-enum MainTab { dailyWorkArea, allImporters, analytics, emailTemplates, exposVisited }
+enum MainTab { dailyWorkArea, allImporters, analytics, emailTemplates, exposVisited, priceList }
 
 class BuyerProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -45,6 +46,8 @@ class BuyerProvider extends ChangeNotifier {
   BuyerProvider() {
     loadBuyers();
     loadExpos();
+    loadPrices();
+    loadPriceHistory();
   }
 
   // Getters
@@ -883,6 +886,95 @@ class BuyerProvider extends ChangeNotifier {
     // Send srNo to Apps Script so it can find the exact row in Column A.
     bool res = await _apiService.deleteBuyerBySrNo(srNoToDelete);
     return res;
+  }
+
+  // ---------------------------------------------------------------------------
+  // PRODUCT PRICE LIST & HISTORY STATE & METHODS
+  // ---------------------------------------------------------------------------
+  static const String _localPricesKey = 'amar_crm_local_prices';
+  List<ProductPrice> _prices = [];
+  List<PriceHistoryItem> _priceHistory = [];
+  bool _isLoadingPrices = false;
+  String _priceCategoryFilter = 'All';
+
+  List<ProductPrice> get prices => _prices;
+  List<PriceHistoryItem> get priceHistory => _priceHistory;
+  bool get isLoadingPrices => _isLoadingPrices;
+  String get priceCategoryFilter => _priceCategoryFilter;
+
+  List<ProductPrice> get filteredPrices {
+    if (_priceCategoryFilter == 'All') return _prices;
+    return _prices
+        .where((p) => p.category.trim().toLowerCase() == _priceCategoryFilter.trim().toLowerCase())
+        .toList();
+  }
+
+  void setPriceCategoryFilter(String category) {
+    _priceCategoryFilter = category;
+    notifyListeners();
+  }
+
+  Future<void> _saveLocalPrices() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String jsonStr = jsonEncode(_prices.map((p) => p.toJson()).toList());
+      await prefs.setString(_localPricesKey, jsonStr);
+    } catch (e) {
+      debugPrint('BuyerProvider: Error saving local prices: $e');
+    }
+  }
+
+  Future<void> loadPrices({bool forceRefresh = false}) async {
+    _isLoadingPrices = true;
+    notifyListeners();
+    try {
+      final remotePrices = await _apiService.fetchPrices();
+      if (remotePrices.isNotEmpty) {
+        _prices = remotePrices;
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        final String? jsonStr = prefs.getString(_localPricesKey);
+        if (jsonStr != null && jsonStr.isNotEmpty) {
+          final List<dynamic> decoded = jsonDecode(jsonStr);
+          _prices = decoded.map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+        } else {
+          _prices = ApiService.getDefaultPrices();
+        }
+      }
+      await _saveLocalPrices();
+    } catch (e) {
+      debugPrint('BuyerProvider: Error loading prices: $e');
+      if (_prices.isEmpty) {
+        _prices = ApiService.getDefaultPrices();
+      }
+    } finally {
+      _isLoadingPrices = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadPriceHistory() async {
+    try {
+      final history = await _apiService.fetchPriceHistory();
+      if (history.isNotEmpty) {
+        _priceHistory = history;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('BuyerProvider: Error loading price history: $e');
+    }
+  }
+
+  Future<bool> updateWeeklyPrices(List<ProductPrice> updatedPrices, {String? weekLabel}) async {
+    _prices = List.from(updatedPrices);
+    await _saveLocalPrices();
+    notifyListeners();
+
+    final ok = await _apiService.saveWeeklyPrices(updatedPrices, weekLabel: weekLabel);
+    if (ok) {
+      await loadPriceHistory();
+    }
+    return ok;
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:js' as js;
 import '../models/buyer.dart';
 import '../models/expo.dart';
+import '../models/product_price.dart';
 
 class ApiService {
   static const String defaultScriptUrl =
@@ -634,5 +635,284 @@ class ApiService {
       debugPrint('ApiService: HTTP deleteExpo failed: $e');
     }
     return true;
+  }
+
+  // ------------------------------------------------------------------
+  // 3. PRODUCT PRICE LIST & HISTORY API
+  // ------------------------------------------------------------------
+
+  Future<List<ProductPrice>> fetchPrices({String? customScriptUrl}) async {
+    final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
+        ? customScriptUrl.trim()
+        : _scriptUrl;
+
+    try {
+      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final response = await http.get(
+        Uri.parse('$targetScriptUrl?action=getPrices&_t=$timestamp'),
+      ).timeout(const Duration(seconds: 6));
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        List? priceList;
+        if (decoded is List) {
+          priceList = decoded;
+        } else if (decoded is Map<String, dynamic>) {
+          if (decoded['prices'] is List) {
+            priceList = decoded['prices'];
+          } else if (decoded['data'] is List) {
+            priceList = decoded['data'];
+          }
+        }
+
+        if (priceList != null && priceList.isNotEmpty) {
+          return priceList
+              .map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map)))
+              .toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiService: fetchPrices exception: $e');
+    }
+    return getDefaultPrices();
+  }
+
+  Future<bool> saveWeeklyPrices(
+    List<ProductPrice> prices, {
+    String? weekLabel,
+    String? customScriptUrl,
+  }) async {
+    final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
+        ? customScriptUrl.trim()
+        : _scriptUrl;
+
+    final Map<String, dynamic> payload = {
+      'action': 'saveWeeklyPrices',
+      'weekLabel': weekLabel ?? 'Week ${DateTime.now().toLocal().toString().split(' ')[0]}',
+      'prices': prices.map((p) => p.toJson()).toList(),
+    };
+
+    final String payloadJson = json.encode(payload);
+    final String base64Payload = base64Encode(utf8.encode(payloadJson));
+    final String getUrl = '$targetScriptUrl?action=updatePrices&payload=${Uri.encodeComponent(base64Payload)}';
+
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('fetch', [
+          targetScriptUrl,
+          js.JsObject.jsify({
+            'method': 'POST',
+            'mode': 'no-cors',
+            'headers': {'Content-Type': 'text/plain;charset=utf-8'},
+            'body': payloadJson,
+          }),
+        ]);
+
+        js.context.callMethod('eval', ['''
+          (function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "$getUrl", true);
+            xhr.send();
+          })();
+        ''']);
+        debugPrint('ApiService: saveWeeklyPrices sent via POST & GET');
+        return true;
+      } catch (e) {
+        debugPrint('ApiService: Web saveWeeklyPrices error: $e');
+      }
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(targetScriptUrl),
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: payloadJson,
+      ).timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200 || response.statusCode == 302) return true;
+    } catch (e) {
+      debugPrint('ApiService: HTTP saveWeeklyPrices failed: $e');
+    }
+    return true;
+  }
+
+  Future<List<PriceHistoryItem>> fetchPriceHistory({String? customScriptUrl}) async {
+    final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
+        ? customScriptUrl.trim()
+        : _scriptUrl;
+
+    try {
+      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final response = await http.get(
+        Uri.parse('$targetScriptUrl?action=getPriceHistory&_t=$timestamp'),
+      ).timeout(const Duration(seconds: 6));
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        List? histList;
+        if (decoded is List) {
+          histList = decoded;
+        } else if (decoded is Map<String, dynamic>) {
+          if (decoded['history'] is List) {
+            histList = decoded['history'];
+          } else if (decoded['data'] is List) {
+            histList = decoded['data'];
+          }
+        }
+
+        if (histList != null) {
+          return histList
+              .map((e) => PriceHistoryItem.fromJson(Map<String, dynamic>.from(e as Map)))
+              .toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiService: fetchPriceHistory exception: $e');
+    }
+    return [];
+  }
+
+  static List<ProductPrice> getDefaultPrices() {
+    return [
+      ProductPrice(
+        id: 'ON-W-01',
+        category: 'White Onion',
+        name: 'Dehydrated White Onion Flakes (Kibbled)',
+        grade: 'A-Grade / Premium',
+        packing: '20 kg Paper Bag',
+        currency: 'USD / MT',
+        currentPrice: 2450,
+        prevPrice: 2400,
+        moq: '1 FCL (14 MT)',
+        validity: 'Week 37',
+        remarks: 'Export Standard, Moisture < 5%',
+        lastUpdated: '2026-09-08',
+      ),
+      ProductPrice(
+        id: 'ON-W-02',
+        category: 'White Onion',
+        name: 'Dehydrated White Onion Minced',
+        grade: 'Export Standard',
+        packing: '20 kg Carton',
+        currency: 'USD / MT',
+        currentPrice: 2550,
+        prevPrice: 2550,
+        moq: '1 FCL (15 MT)',
+        validity: 'Week 37',
+        remarks: 'Size 1-3mm, Clean',
+        lastUpdated: '2026-09-08',
+      ),
+      ProductPrice(
+        id: 'ON-W-03',
+        category: 'White Onion',
+        name: 'Dehydrated White Onion Powder',
+        grade: 'Premium Mesh 80-100',
+        packing: '25 kg Bag',
+        currency: 'USD / MT',
+        currentPrice: 2300,
+        prevPrice: 2350,
+        moq: '1 FCL (16 MT)',
+        validity: 'Week 37',
+        remarks: 'Free Flowing, 100% Pure',
+        lastUpdated: '2026-09-08',
+      ),
+      ProductPrice(
+        id: 'ON-R-01',
+        category: 'Red Onion',
+        name: 'Dehydrated Red Onion Flakes',
+        grade: 'Deep Red Premium',
+        packing: '20 kg Bag',
+        currency: 'USD / MT',
+        currentPrice: 2600,
+        prevPrice: 2550,
+        moq: '1 FCL (14 MT)',
+        validity: 'Week 37',
+        remarks: 'Natural Crimson Color',
+        lastUpdated: '2026-09-08',
+      ),
+      ProductPrice(
+        id: 'ON-R-02',
+        category: 'Red Onion',
+        name: 'Dehydrated Red Onion Powder',
+        grade: 'Standard 80-100 Mesh',
+        packing: '25 kg Bag',
+        currency: 'USD / MT',
+        currentPrice: 2400,
+        prevPrice: 2400,
+        moq: '1 FCL (16 MT)',
+        validity: 'Week 37',
+        remarks: 'Export Quality',
+        lastUpdated: '2026-09-08',
+      ),
+      ProductPrice(
+        id: 'GAR-01',
+        category: 'Garlic',
+        name: 'Dehydrated Garlic Flakes (Cloves)',
+        grade: 'Premium White',
+        packing: '20 kg Bag',
+        currency: 'USD / MT',
+        currentPrice: 3100,
+        prevPrice: 3050,
+        moq: '1 FCL (14 MT)',
+        validity: 'Week 37',
+        remarks: 'Strong Pungency, Whole Cloves',
+        lastUpdated: '2026-09-08',
+      ),
+      ProductPrice(
+        id: 'GAR-02',
+        category: 'Garlic',
+        name: 'Dehydrated Garlic Granules (40-60 Mesh)',
+        grade: 'Grade A',
+        packing: '25 kg Carton',
+        currency: 'USD / MT',
+        currentPrice: 3200,
+        prevPrice: 3200,
+        moq: '1 FCL (15 MT)',
+        validity: 'Week 37',
+        remarks: 'Golden/White, Even Cut',
+        lastUpdated: '2026-09-08',
+      ),
+      ProductPrice(
+        id: 'GAR-03',
+        category: 'Garlic',
+        name: 'Dehydrated Garlic Powder',
+        grade: '100 Mesh Fine',
+        packing: '25 kg Bag',
+        currency: 'USD / MT',
+        currentPrice: 2950,
+        prevPrice: 3000,
+        moq: '1 FCL (16 MT)',
+        validity: 'Week 37',
+        remarks: 'Pure Aromatic Flavor',
+        lastUpdated: '2026-09-08',
+      ),
+      ProductPrice(
+        id: 'SPC-01',
+        category: 'Spices',
+        name: 'Cumin Seeds (Jeera)',
+        grade: 'Singapore 99% Clean',
+        packing: '25 kg Jute / PP Bag',
+        currency: 'USD / MT',
+        currentPrice: 4200,
+        prevPrice: 4100,
+        moq: '1 FCL (13 MT)',
+        validity: 'Week 37',
+        remarks: 'Machine Cleaned, High Volatile Oil',
+        lastUpdated: '2026-09-08',
+      ),
+      ProductPrice(
+        id: 'SPC-02',
+        category: 'Spices',
+        name: 'Turmeric Finger / Powder',
+        grade: 'Curcumin 3%+',
+        packing: '25 kg Bag',
+        currency: 'USD / MT',
+        currentPrice: 1950,
+        prevPrice: 1950,
+        moq: '1 FCL (18 MT)',
+        validity: 'Week 37',
+        remarks: 'Salem / Nizamabad Origin',
+        lastUpdated: '2026-09-08',
+      ),
+    ];
   }
 }

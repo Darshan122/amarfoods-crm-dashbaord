@@ -9,6 +9,7 @@ import 'widgets/daily_work_area_view.dart';
 import 'widgets/email_work_section.dart';
 import 'widgets/email_templates_view.dart';
 import 'widgets/expos_visited_view.dart';
+import 'widgets/price_list_view.dart';
 
 enum DisplayLayout { table, kanban }
 
@@ -74,16 +75,19 @@ class _DashboardViewState extends State<DashboardView> {
                           ? 2
                           : p.activeTab == MainTab.emailTemplates
                               ? 3
-                              : 4,
+                              : p.activeTab == MainTab.exposVisited
+                                  ? 4
+                                  : 5,
               onTap: (index) {
                 if (index == 0) p.setActiveTab(MainTab.dailyWorkArea);
                 if (index == 1) p.setActiveTab(MainTab.allImporters);
                 if (index == 2) p.setActiveTab(MainTab.analytics);
                 if (index == 3) p.setActiveTab(MainTab.emailTemplates);
                 if (index == 4) p.setActiveTab(MainTab.exposVisited);
+                if (index == 5) p.setActiveTab(MainTab.priceList);
               },
               type: BottomNavigationBarType.fixed,
-              selectedItemColor: const Color(0xFF8B2C69),
+              selectedItemColor: const Color(0xFF0F766E),
               unselectedItemColor: const Color(0xFF64748B),
               selectedFontSize: 11,
               unselectedFontSize: 11,
@@ -108,6 +112,10 @@ class _DashboardViewState extends State<DashboardView> {
                   icon: Icon(Icons.business_center_rounded),
                   label: 'Expos',
                 ),
+                const BottomNavigationBarItem(
+                  icon: Icon(Icons.price_change_rounded),
+                  label: 'Prices',
+                ),
               ],
             )
           : null,
@@ -125,7 +133,7 @@ class _DashboardViewState extends State<DashboardView> {
             _buildMarketSegmentBar(p),
 
             // ------------------------------------------------------------------
-            // 2. MAIN CONTENT AREA (Switches between Daily Work Area, All Importers, Analytics, & Expos)
+            // 2. MAIN CONTENT AREA (Switches between Views)
             // ------------------------------------------------------------------
             Expanded(
               child: SelectionArea(
@@ -139,7 +147,9 @@ class _DashboardViewState extends State<DashboardView> {
                                 ? const EmailTemplatesView()
                                 : p.activeTab == MainTab.exposVisited
                                     ? ExposVisitedView(provider: p)
-                                    : _buildAllImportersView(p),
+                                    : p.activeTab == MainTab.priceList
+                                        ? PriceListView(provider: p)
+                                        : _buildAllImportersView(p),
               ),
             ),
           ],
@@ -353,6 +363,12 @@ class _DashboardViewState extends State<DashboardView> {
                   icon: Icons.business_center_rounded,
                   isActive: p.activeTab == MainTab.exposVisited,
                   onTap: () => p.setActiveTab(MainTab.exposVisited),
+                ),
+                _buildNavTab(
+                  label: 'Price List',
+                  icon: Icons.price_change_rounded,
+                  isActive: p.activeTab == MainTab.priceList,
+                  onTap: () => p.setActiveTab(MainTab.priceList),
                 ),
               ],
             ),

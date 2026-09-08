@@ -264,16 +264,14 @@ class PricePdfService {
                   children: [
                     _termItem('Price Basis', 'Ex-Factory Mahuva (Gujarat, India) - GST & Freight extra as applicable'),
                     _termItem('Price Validity', 'Strictly valid for 7 days only from the date of issue'),
-                    _termItem('Payment Terms', '30% Advance TT & balance against dispatch / BL copy or 100% LC at Sight'),
                   ],
                 ),
               ),
-              pw.SizedBox(width: 12),
+              pw.SizedBox(width: 16),
               pw.Expanded(
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _termItem('Delivery Lead Time', 'Within 7 - 12 days of confirmed purchase order'),
                     _termItem('Quality Standards', '100% Pure Dehydrated Products; In-house COA included (BRC / FSSAI / Halal)'),
                     _termItem('Dispatch & Transport', 'Available across all India or Mundra/Pipavav seaport on actual freight basis'),
                   ],

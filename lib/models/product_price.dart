@@ -42,9 +42,8 @@ class ProductPrice {
   }
 
   String get currencySymbol {
-    if (currency.contains('₹') || currency.toUpperCase().contains('INR')) return '₹';
     if (currency.contains(r'$') || currency.toUpperCase().contains('USD')) return r'$';
-    return '';
+    return '₹';
   }
 
   ProductPrice copyWith({

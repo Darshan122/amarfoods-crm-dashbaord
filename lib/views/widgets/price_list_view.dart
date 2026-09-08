@@ -203,6 +203,53 @@ class _PriceListViewState extends State<PriceListView> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
+                    // Sync / Reset 20 Products Button
+                    TextButton.icon(
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            title: const Row(
+                              children: [
+                                Icon(Icons.currency_rupee_rounded, color: Color(0xFF0F766E)),
+                                SizedBox(width: 8),
+                                Text('Sync 20 Products (₹ / kg)'),
+                              ],
+                            ),
+                            content: const Text(
+                              'This will load all 20 exact products (White Onion, Red Onion, Pink Onion, and Garlic) at current Ex-Factory rates in Indian Rupees (₹ / kg) and sync them to your Google Sheet.\n\nDo you want to proceed?',
+                            ),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F766E), foregroundColor: Colors.white),
+                                onPressed: () => Navigator.of(ctx).pop(true),
+                                child: const Text('Sync Now'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          await p.resetToDefault20Prices();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('✅ Successfully loaded all 20 products in ₹ / kg!'),
+                                backgroundColor: Color(0xFF15803D),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.currency_rupee_rounded, size: 15, color: Color(0xFFCCFBF1)),
+                      label: const Text('Sync 20 Items (₹)', style: TextStyle(color: Color(0xFFCCFBF1), fontWeight: FontWeight.bold, fontSize: 12)),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.1),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
                     // Refresh Button
                     IconButton(
                       tooltip: 'Refresh from Google Sheets',

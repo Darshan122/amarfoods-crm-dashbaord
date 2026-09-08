@@ -929,16 +929,34 @@ class BuyerProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final remotePrices = await _apiService.fetchPrices();
-      if (remotePrices.isNotEmpty) {
+      final bool hasOldUsd = remotePrices.any((p) =>
+          p.currency.contains('USD') ||
+          p.id.startsWith('ON-') ||
+          p.id.startsWith('GAR-') ||
+          p.id.startsWith('SPC-'));
+
+      if (remotePrices.isNotEmpty && !hasOldUsd && remotePrices.length >= 15) {
         _prices = remotePrices;
       } else {
         final prefs = await SharedPreferences.getInstance();
         final String? jsonStr = prefs.getString(_localPricesKey);
         if (jsonStr != null && jsonStr.isNotEmpty) {
           final List<dynamic> decoded = jsonDecode(jsonStr);
-          _prices = decoded.map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+          final localList = decoded.map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+          final bool localHasOldUsd = localList.any((p) =>
+              p.currency.contains('USD') ||
+              p.id.startsWith('ON-') ||
+              p.id.startsWith('GAR-') ||
+              p.id.startsWith('SPC-'));
+          if (localList.isNotEmpty && !localHasOldUsd && localList.length >= 15) {
+            _prices = localList;
+          } else {
+            _prices = ApiService.getDefaultPrices();
+            _apiService.saveWeeklyPrices(_prices, weekLabel: 'Valid for 7 Days Only');
+          }
         } else {
           _prices = ApiService.getDefaultPrices();
+          _apiService.saveWeeklyPrices(_prices, weekLabel: 'Valid for 7 Days Only');
         }
       }
       await _saveLocalPrices();
@@ -947,6 +965,22 @@ class BuyerProvider extends ChangeNotifier {
       if (_prices.isEmpty) {
         _prices = ApiService.getDefaultPrices();
       }
+    } finally {
+      _isLoadingPrices = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> resetToDefault20Prices() async {
+    _isLoadingPrices = true;
+    notifyListeners();
+    try {
+      _prices = ApiService.getDefaultPrices();
+      await _saveLocalPrices();
+      await _apiService.saveWeeklyPrices(_prices, weekLabel: 'Valid for 7 Days Only');
+      await loadPriceHistory();
+    } catch (e) {
+      debugPrint('BuyerProvider: resetToDefault20Prices error: $e');
     } finally {
       _isLoadingPrices = false;
       notifyListeners();

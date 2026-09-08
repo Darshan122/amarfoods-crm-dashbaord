@@ -81,7 +81,7 @@ class PricePdfService {
                       style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
                     ),
                     pw.Text(
-                      'Mahuva - 364290, Gujarat, India | APEDA • FSSAI • BRC • Halal Certified',
+                      'Mahuva - 364290, Gujarat, India | APEDA | FSSAI | BRC | Halal Certified',
                       style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
                     ),
                   ],
@@ -262,9 +262,9 @@ class PricePdfService {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _termItem('• Price Basis', 'Ex-Factory Mahuva (Gujarat, India) — GST & Freight extra as applicable'),
-                    _termItem('• Price Validity', 'Strictly valid for 7 days only from the date of issue'),
-                    _termItem('• Payment Terms', '30% Advance TT & balance against dispatch / BL copy or 100% LC at Sight'),
+                    _termItem('Price Basis', 'Ex-Factory Mahuva (Gujarat, India) - GST & Freight extra as applicable'),
+                    _termItem('Price Validity', 'Strictly valid for 7 days only from the date of issue'),
+                    _termItem('Payment Terms', '30% Advance TT & balance against dispatch / BL copy or 100% LC at Sight'),
                   ],
                 ),
               ),
@@ -273,9 +273,9 @@ class PricePdfService {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _termItem('• Delivery Lead Time', 'Within 7 - 12 days of confirmed purchase order'),
-                    _termItem('• Quality Standards', '100% Pure Dehydrated Products; In-house COA included (BRC / FSSAI / Halal)'),
-                    _termItem('• Dispatch & Transport', 'Available across all India or Mundra/Pipavav seaport on actual freight basis'),
+                    _termItem('Delivery Lead Time', 'Within 7 - 12 days of confirmed purchase order'),
+                    _termItem('Quality Standards', '100% Pure Dehydrated Products; In-house COA included (BRC / FSSAI / Halal)'),
+                    _termItem('Dispatch & Transport', 'Available across all India or Mundra/Pipavav seaport on actual freight basis'),
                   ],
                 ),
               ),
@@ -288,20 +288,36 @@ class PricePdfService {
 
   static pw.Widget _termItem(String title, String desc) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 3),
-      child: pw.RichText(
-        text: pw.TextSpan(
-          children: [
-            pw.TextSpan(
-              text: '$title: ',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7.5, color: PdfColors.black),
+      padding: const pw.EdgeInsets.only(bottom: 3.5),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            width: 3.5,
+            height: 3.5,
+            margin: const pw.EdgeInsets.only(top: 3.5, right: 5),
+            decoration: pw.BoxDecoration(
+              color: PdfColor.fromHex('0F766E'),
+              shape: pw.BoxShape.circle,
             ),
-            pw.TextSpan(
-              text: desc,
-              style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+          ),
+          pw.Expanded(
+            child: pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(
+                    text: '$title: ',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7.5, color: PdfColors.black),
+                  ),
+                  pw.TextSpan(
+                    text: desc,
+                    style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -324,8 +340,23 @@ class PricePdfService {
               style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('0F766E')),
             ),
             pw.Text('Export Sales Executive | Amar Foods, India', style: const pw.TextStyle(fontSize: 8)),
-            pw.Text('📞 Mob / WhatsApp: +91 7284088737', style: const pw.TextStyle(fontSize: 8)),
-            pw.Text('📧 Email: export@amarfoods.in  |  🌐 Web: https://amarfoods.in/', style: const pw.TextStyle(fontSize: 8)),
+            pw.SizedBox(height: 2),
+            pw.Row(
+              children: [
+                pw.Text('Mob / WhatsApp: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7.5, color: PdfColor.fromHex('0F766E'))),
+                pw.Text('+91 7284088737', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800)),
+              ],
+            ),
+            pw.SizedBox(height: 1.5),
+            pw.Row(
+              children: [
+                pw.Text('Email: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7.5, color: PdfColor.fromHex('0F766E'))),
+                pw.Text('export@amarfoods.in', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800)),
+                pw.Text('   |   ', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey400)),
+                pw.Text('Web: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7.5, color: PdfColor.fromHex('0F766E'))),
+                pw.Text('https://amarfoods.in/', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800)),
+              ],
+            ),
           ],
         ),
         pw.Container(
@@ -356,7 +387,7 @@ class PricePdfService {
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(
-              'Amar Foods • Confidential Quotation for Intended Recipient',
+              'Amar Foods | Confidential Quotation for Intended Recipient',
               style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey600),
             ),
             pw.Text(

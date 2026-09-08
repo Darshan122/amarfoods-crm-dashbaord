@@ -203,7 +203,7 @@ class PricePdfService {
               _cell('${idx + 1}', align: pw.TextAlign.center, fontSize: 8),
               _cell(p.name, isBold: true, fontSize: 8),
               _cell(p.grade.isNotEmpty ? p.grade : '-', fontSize: 7.5),
-              _cell(p.packing.isNotEmpty ? p.packing : '20/25 kg Bag', fontSize: 7.5),
+              _cell(p.packing.isNotEmpty ? p.packing : '14/20/25 kg Bag', fontSize: 7.5),
               _cell(p.moq.isNotEmpty ? p.moq : '1000 kg', align: pw.TextAlign.center, fontSize: 7.5),
               _cell(priceStr, align: pw.TextAlign.right, isBold: true, fontSize: 8.5, color: PdfColor.fromHex('0F766E')),
             ],
@@ -264,6 +264,7 @@ class PricePdfService {
                   children: [
                     _termItem('Price Basis', 'Ex-Factory Mahuva (Gujarat, India) - GST & Freight extra as applicable'),
                     _termItem('Price Validity', 'Strictly valid for 7 days only from the date of issue'),
+                    _termItem('Customized Packing', 'Packaging can be customized as per buyer\'s requirement'),
                   ],
                 ),
               ),

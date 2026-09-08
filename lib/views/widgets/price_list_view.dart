@@ -300,7 +300,7 @@ class _PriceListViewState extends State<PriceListView> {
                           style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, color: Color(0xFF78350F)),
                         ),
                         TextSpan(
-                          text: 'All prices quoted are EX-FACTORY rates (Mahuva, Gujarat) in Indian Rupees (₹ / kg) and STRICTLY VALID FOR 7 DAYS ONLY from the date of issue. Customized packaging is available as per buyer requirement.',
+                          text: 'All prices quoted are EX-FACTORY rates (Mahuva, Gujarat) in Indian Rupees (₹ / kg) and STRICTLY VALID FOR 7 DAYS ONLY from current week. Customized packaging is available as per buyer requirement.',
                           style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
                         ),
                       ],

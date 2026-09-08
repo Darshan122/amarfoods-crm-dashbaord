@@ -148,7 +148,7 @@ class PricePdfService {
             ),
             pw.TextSpan(
               text:
-                  'All quoted prices are EX-FACTORY (Mahuva, Gujarat) rates in Indian Rupees (INR / Rs. per kg) and STRICTLY VALID FOR 7 DAYS ONLY from the date of issue.',
+                  'All quoted prices are EX-FACTORY (Mahuva, Gujarat) rates in Indian Rupees (INR / Rs. per kg) and STRICTLY VALID FOR 7 DAYS ONLY from current week.',
               style: pw.TextStyle(
                 fontSize: 8.5,
                 fontWeight: pw.FontWeight.bold,
@@ -263,7 +263,7 @@ class PricePdfService {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     _termItem('Price Basis', 'Ex-Factory Mahuva (Gujarat, India) - GST & Freight extra as applicable'),
-                    _termItem('Price Validity', 'Strictly valid for 7 days only from the date of issue'),
+                    _termItem('Price Validity', 'Strictly valid for 7 days only from current week'),
                     _termItem('Customized Packing', 'Packaging can be customized as per buyer\'s requirement'),
                   ],
                 ),

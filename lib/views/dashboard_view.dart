@@ -113,7 +113,7 @@ class _DashboardViewState extends State<DashboardView> {
                   label: 'Expos',
                 ),
                 const BottomNavigationBarItem(
-                  icon: Icon(Icons.price_change_rounded),
+                  icon: Icon(Icons.currency_rupee_rounded),
                   label: 'Prices',
                 ),
               ],
@@ -366,7 +366,7 @@ class _DashboardViewState extends State<DashboardView> {
                 ),
                 _buildNavTab(
                   label: 'Price List',
-                  icon: Icons.price_change_rounded,
+                  icon: Icons.currency_rupee_rounded,
                   isActive: p.activeTab == MainTab.priceList,
                   onTap: () => p.setActiveTab(MainTab.priceList),
                 ),

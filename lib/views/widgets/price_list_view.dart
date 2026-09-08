@@ -65,7 +65,7 @@ class _PriceListViewState extends State<PriceListView> {
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.price_change_rounded, color: Colors.white, size: 28),
+                  child: const Icon(Icons.currency_rupee_rounded, color: Colors.white, size: 28),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -105,11 +105,57 @@ class _PriceListViewState extends State<PriceListView> {
                               ],
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.currency_rupee_rounded, size: 12, color: Color(0xFF92400E)),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Ex-Factory Rate',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF92400E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEE2E2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.timer_outlined, size: 12, color: Color(0xFFB91C1C)),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Valid 7 Days Only',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFB91C1C),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        'Weekly FOB Mundra export price tracking with automatic Google Sheets history sync and 1-click PDF quotations.',
+                        'Weekly Ex-Factory (Mahuva) price tracking in Indian Rupees (₹ / kg) with automatic Google Sheets history sync and 1-click PDF quotations.',
                         style: TextStyle(color: Color(0xFFCCFBF1), fontSize: 13),
                       ),
                     ],
@@ -168,7 +214,56 @@ class _PriceListViewState extends State<PriceListView> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+
+          // ─── BOLD EX-FACTORY & 7-DAY VALIDITY NOTICE BANNER ───────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF3C7), // Light Amber
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFDE68A),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.currency_rupee_rounded, color: Color(0xFFB45309), size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: RichText(
+                    text: const TextSpan(
+                      style: TextStyle(fontSize: 13, color: Color(0xFF92400E)),
+                      children: [
+                        TextSpan(
+                          text: 'NOTE: ',
+                          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, color: Color(0xFF78350F)),
+                        ),
+                        TextSpan(
+                          text: 'All prices quoted are EX-FACTORY rates (Mahuva, Gujarat) in Indian Rupees (₹ / kg) and STRICTLY VALID FOR 7 DAYS ONLY from the date of issue.',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // ─── STATS CARDS ─────────────────────────────────────────────────
           Row(
@@ -179,16 +274,16 @@ class _PriceListViewState extends State<PriceListView> {
                 bgColor: const Color(0xFFF0FDFA),
                 title: 'TOTAL PRODUCTS',
                 value: '${prices.length}',
-                subtitle: 'Active export catalog',
+                subtitle: 'Ex-Factory catalog',
               ),
               const SizedBox(width: 14),
               _buildStatCard(
                 icon: Icons.currency_rupee_rounded,
                 iconColor: const Color(0xFF2563EB),
                 bgColor: const Color(0xFFEFF6FF),
-                title: 'AVERAGE RATE',
+                title: 'AVERAGE FACTORY RATE',
                 value: '₹$avgPrice',
-                subtitle: '₹ / kg Catalog Average',
+                subtitle: '₹ / kg Ex-Factory Mahuva',
               ),
               const SizedBox(width: 14),
               _buildStatCard(
@@ -451,7 +546,7 @@ class _PriceListViewState extends State<PriceListView> {
                 Expanded(flex: 3, child: Text('PRODUCT NAME & SPEC', style: _headerStyle)),
                 Expanded(flex: 2, child: Text('PACKAGING', style: _headerStyle)),
                 Expanded(flex: 1, child: Text('MOQ', style: _headerStyle)),
-                Expanded(flex: 2, child: Text('CURRENT RATE', style: _headerStyle)),
+                Expanded(flex: 2, child: Text('EX-FACTORY RATE (₹/KG)', style: _headerStyle)),
                 Expanded(flex: 2, child: Text('PREV WEEK', style: _headerStyle)),
                 Expanded(flex: 2, child: Text('WEEKLY CHANGE', style: _headerStyle)),
                 SizedBox(width: 90, child: Text('ACTION', textAlign: TextAlign.right, style: _headerStyle)),
@@ -845,11 +940,11 @@ class _PriceListViewState extends State<PriceListView> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: const [
                               Text(
-                                'Update Weekly FOB Export Prices',
+                                'Update Weekly Ex-Factory Rates (₹ / kg)',
                                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                               ),
                               Text(
-                                'Enter new prices for each product. Previous prices will automatically be moved to history archive.',
+                                'Enter new factory rates for each product. Previous rates will automatically be archived.',
                                 style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                               ),
                             ],
@@ -861,9 +956,29 @@ class _PriceListViewState extends State<PriceListView> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFF59E0B)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.currency_rupee_rounded, color: Color(0xFFB45309), size: 16),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'NOTE: All prices are Ex-Factory rates (Mahuva, Gujarat) and valid for 7 days only.',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
 
                     // Week Label & Validity
                     Row(

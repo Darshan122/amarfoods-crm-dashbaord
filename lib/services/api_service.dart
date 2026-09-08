@@ -773,7 +773,7 @@ class ApiService {
 
   static List<ProductPrice> getDefaultPrices() {
     final today = DateTime.now().toLocal().toString().split(' ')[0];
-    const defaultValidity = 'Current Week';
+    const defaultValidity = 'Valid for 7 Days Only';
 
     return [
       // ─── WHITE ONION ─────────────────────────────────────────

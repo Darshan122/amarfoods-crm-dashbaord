@@ -8,7 +8,7 @@ class PricePdfService {
   static Future<Uint8List> generatePriceListPdf({
     required List<ProductPrice> prices,
     required String weekLabel,
-    String validity = '7 Days from Issue Date',
+    String validity = 'Valid for 7 Days Only',
   }) async {
     final pdf = pw.Document();
 
@@ -30,11 +30,13 @@ class PricePdfService {
         footer: (pw.Context ctx) => _buildFooter(ctx),
         build: (pw.Context ctx) {
           return [
-            pw.SizedBox(height: 12),
+            pw.SizedBox(height: 10),
+            _buildBoldNotice(),
+            pw.SizedBox(height: 10),
             _buildProductTable(prices),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 12),
             _buildCommercialTerms(),
-            pw.SizedBox(height: 14),
+            pw.SizedBox(height: 12),
             _buildSignature(),
           ];
         },
@@ -97,7 +99,7 @@ class PricePdfService {
                 crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
                   pw.Text(
-                    'WEEKLY EXPORT PRICE LIST',
+                    'WEEKLY EX-FACTORY PRICE LIST',
                     style: pw.TextStyle(
                       fontSize: 10,
                       fontWeight: pw.FontWeight.bold,
@@ -106,11 +108,11 @@ class PricePdfService {
                   ),
                   pw.SizedBox(height: 2),
                   pw.Text(
-                    weekLabel.isNotEmpty ? weekLabel : 'Week Price Offer',
+                    weekLabel.isNotEmpty ? weekLabel : 'Current Week Offer',
                     style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
                   ),
                   pw.Text(
-                    'Date: $todayStr | Valid: $validity',
+                    'Basis: Ex-Factory Mahuva | Valid: 7 Days Only',
                     style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700),
                   ),
                 ],
@@ -124,6 +126,41 @@ class PricePdfService {
     );
   }
 
+  static pw.Widget _buildBoldNotice() {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('FEF3C7'), // Light Amber
+        border: pw.Border.all(color: PdfColor.fromHex('D97706'), width: 1.2),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+      ),
+      child: pw.RichText(
+        text: pw.TextSpan(
+          children: [
+            pw.TextSpan(
+              text: 'IMPORTANT NOTE: ',
+              style: pw.TextStyle(
+                fontSize: 8.5,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromHex('92400E'),
+              ),
+            ),
+            pw.TextSpan(
+              text:
+                  'All quoted prices are EX-FACTORY (Mahuva, Gujarat) rates in Indian Rupees (INR / Rs. per kg) and STRICTLY VALID FOR 7 DAYS ONLY from the date of issue.',
+              style: pw.TextStyle(
+                fontSize: 8.5,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromHex('78350F'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   static pw.Widget _buildProductTable(List<ProductPrice> prices) {
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
@@ -133,7 +170,7 @@ class PricePdfService {
         2: const pw.FlexColumnWidth(1.6), // Grade
         3: const pw.FlexColumnWidth(1.5), // Packing
         4: const pw.FlexColumnWidth(1.2), // MOQ
-        5: const pw.FlexColumnWidth(1.5), // FOB Price
+        5: const pw.FlexColumnWidth(1.6), // Rate
       },
       children: [
         // Table Header
@@ -145,7 +182,7 @@ class PricePdfService {
             _cell('GRADE / SPEC', isHeader: true),
             _cell('PACKAGING', isHeader: true),
             _cell('MOQ', isHeader: true, align: pw.TextAlign.center),
-            _cell('OFFER RATE', isHeader: true, align: pw.TextAlign.right),
+            _cell('EX-FACTORY RATE (RS/KG)', isHeader: true, align: pw.TextAlign.right),
           ],
         ),
         // Table Rows
@@ -225,9 +262,9 @@ class PricePdfService {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _termItem('• Port of Loading', 'Mundra Port / Pipavav Port, Gujarat, India'),
-                    _termItem('• Payment Terms', '30% Advance TT & 70% against BL copy / 100% LC at Sight'),
-                    _termItem('• Delivery Lead Time', 'Within 10 - 14 days of confirmed order & packaging artwork'),
+                    _termItem('• Price Basis', 'Ex-Factory Mahuva (Gujarat, India) — GST & Freight extra as applicable'),
+                    _termItem('• Price Validity', 'Strictly valid for 7 days only from the date of issue'),
+                    _termItem('• Payment Terms', '30% Advance TT & balance against dispatch / BL copy or 100% LC at Sight'),
                   ],
                 ),
               ),
@@ -236,9 +273,9 @@ class PricePdfService {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _termItem('• Container Capacity', '20ft FCL ~ 14 to 15 MT | 40ft FCL ~ 25 to 26 MT'),
-                    _termItem('• Quality Assurance', 'In-house COA included; Third-party inspection (SGS / BV) welcome'),
-                    _termItem('• CIF / CFR Pricing', 'Available on request for any destination seaport worldwide'),
+                    _termItem('• Delivery Lead Time', 'Within 7 - 12 days of confirmed purchase order'),
+                    _termItem('• Quality Standards', '100% Pure Dehydrated Products; In-house COA included (BRC / FSSAI / Halal)'),
+                    _termItem('• Dispatch & Transport', 'Available across all India or Mundra/Pipavav seaport on actual freight basis'),
                   ],
                 ),
               ),

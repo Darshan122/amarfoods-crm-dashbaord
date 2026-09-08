@@ -183,12 +183,12 @@ class _PriceListViewState extends State<PriceListView> {
               ),
               const SizedBox(width: 14),
               _buildStatCard(
-                icon: Icons.attach_money_rounded,
+                icon: Icons.currency_rupee_rounded,
                 iconColor: const Color(0xFF2563EB),
                 bgColor: const Color(0xFFEFF6FF),
-                title: 'AVERAGE FOB PRICE',
-                value: '\$$avgPrice',
-                subtitle: 'USD / Metric Ton',
+                title: 'AVERAGE RATE',
+                value: '₹$avgPrice',
+                subtitle: '₹ / kg Catalog Average',
               ),
               const SizedBox(width: 14),
               _buildStatCard(
@@ -254,8 +254,8 @@ class _PriceListViewState extends State<PriceListView> {
                     'All',
                     'White Onion',
                     'Red Onion',
+                    'Pink Onion',
                     'Garlic',
-                    'Spices',
                   ].map((cat) {
                     final isSel = p.priceCategoryFilter.toLowerCase() == cat.toLowerCase();
                     return ChoiceChip(
@@ -451,7 +451,7 @@ class _PriceListViewState extends State<PriceListView> {
                 Expanded(flex: 3, child: Text('PRODUCT NAME & SPEC', style: _headerStyle)),
                 Expanded(flex: 2, child: Text('PACKAGING', style: _headerStyle)),
                 Expanded(flex: 1, child: Text('MOQ', style: _headerStyle)),
-                Expanded(flex: 2, child: Text('CURRENT FOB PRICE', style: _headerStyle)),
+                Expanded(flex: 2, child: Text('CURRENT RATE', style: _headerStyle)),
                 Expanded(flex: 2, child: Text('PREV WEEK', style: _headerStyle)),
                 Expanded(flex: 2, child: Text('WEEKLY CHANGE', style: _headerStyle)),
                 SizedBox(width: 90, child: Text('ACTION', textAlign: TextAlign.right, style: _headerStyle)),
@@ -468,6 +468,7 @@ class _PriceListViewState extends State<PriceListView> {
               final item = prices[index];
               final isIncreased = item.changeAmount > 0;
               final isDecreased = item.changeAmount < 0;
+              final sym = item.currencySymbol.isNotEmpty ? item.currencySymbol : '₹';
 
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
@@ -542,14 +543,14 @@ class _PriceListViewState extends State<PriceListView> {
                         style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                       ),
                     ),
-                    // Current FOB Price
+                    // Current Price
                     Expanded(
                       flex: 2,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item.currentPrice > 0 ? '\$${item.currentPrice.toStringAsFixed(0)}' : 'On Request',
+                            item.currentPrice > 0 ? '$sym${item.currentPrice.toStringAsFixed(0)}' : 'On Request',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -567,7 +568,7 @@ class _PriceListViewState extends State<PriceListView> {
                     Expanded(
                       flex: 2,
                       child: Text(
-                        item.prevPrice > 0 ? '\$${item.prevPrice.toStringAsFixed(0)}' : '-',
+                        item.prevPrice > 0 ? '$sym${item.prevPrice.toStringAsFixed(0)}' : '-',
                         style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                       ),
                     ),
@@ -602,9 +603,9 @@ class _PriceListViewState extends State<PriceListView> {
                             const SizedBox(width: 4),
                             Text(
                               isIncreased
-                                  ? '+\$${item.changeAmount.toStringAsFixed(0)} (${item.changePercent})'
+                                  ? '+$sym${item.changeAmount.toStringAsFixed(0)} (${item.changePercent})'
                                   : (isDecreased
-                                      ? '-\$${item.changeAmount.abs().toStringAsFixed(0)} (${item.changePercent})'
+                                      ? '-$sym${item.changeAmount.abs().toStringAsFixed(0)} (${item.changePercent})'
                                       : 'Stable'),
                               style: TextStyle(
                                 fontSize: 11,
@@ -766,13 +767,19 @@ class _PriceListViewState extends State<PriceListView> {
                       ),
                     ),
                     Expanded(flex: 2, child: Text(h.packing, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)))),
-                    Expanded(flex: 2, child: Text('\$${h.price.toStringAsFixed(0)} ${h.currency}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)))),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        '${h.currency.contains('₹') || h.currency.toUpperCase().contains('INR') ? '₹' : (h.currency.contains(r'$') || h.currency.toUpperCase().contains('USD') ? r'$' : '')}${h.price.toStringAsFixed(0)} ${h.currency}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                      ),
+                    ),
                     Expanded(
                       flex: 2,
                       child: Text(
                         isPos
-                            ? '+\$${h.changeAmount.toStringAsFixed(0)} (${h.changePercent})'
-                            : (isNeg ? '-\$${h.changeAmount.abs().toStringAsFixed(0)} (${h.changePercent})' : '0.0%'),
+                            ? '+${h.currency.contains('₹') || h.currency.toUpperCase().contains('INR') ? '₹' : r'$'}${h.changeAmount.toStringAsFixed(0)} (${h.changePercent})'
+                            : (isNeg ? '-${h.currency.contains('₹') || h.currency.toUpperCase().contains('INR') ? '₹' : r'$'}${h.changeAmount.abs().toStringAsFixed(0)} (${h.changePercent})' : '0.0%'),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -907,7 +914,7 @@ class _PriceListViewState extends State<PriceListView> {
                                 Expanded(
                                   flex: 1,
                                   child: Text(
-                                    'Prev: \$${prod.currentPrice.toStringAsFixed(0)}',
+                                    'Prev: ${prod.currencySymbol.isNotEmpty ? prod.currencySymbol : '₹'}${prod.currentPrice.toStringAsFixed(0)}',
                                     style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                                   ),
                                 ),
@@ -918,9 +925,9 @@ class _PriceListViewState extends State<PriceListView> {
                                     controller: ctrl,
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
-                                      prefixText: '\$ ',
-                                      suffixText: 'USD',
-                                      labelText: 'New FOB Price',
+                                      prefixText: '${prod.currencySymbol.isNotEmpty ? prod.currencySymbol : '₹'} ',
+                                      suffixText: prod.currency,
+                                      labelText: 'New Rate',
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                     ),
@@ -1019,7 +1026,10 @@ class _PriceListViewState extends State<PriceListView> {
             TextField(
               controller: priceCtrl,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'FOB Price (USD / MT)', prefixText: '\$ '),
+              decoration: InputDecoration(
+                labelText: 'Price (${item.currency})',
+                prefixText: '${item.currencySymbol.isNotEmpty ? item.currencySymbol : '₹'} ',
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -1066,6 +1076,7 @@ class _PriceListViewState extends State<PriceListView> {
   static Color _getCategoryColor(String cat) {
     final lower = cat.toLowerCase();
     if (lower.contains('white')) return const Color(0xFF0F766E);
+    if (lower.contains('pink')) return const Color(0xFFDB2777);
     if (lower.contains('red')) return const Color(0xFFE11D48);
     if (lower.contains('garlic')) return const Color(0xFFD97706);
     if (lower.contains('spice')) return const Color(0xFF7C3AED);

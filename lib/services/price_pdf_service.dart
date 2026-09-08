@@ -145,7 +145,7 @@ class PricePdfService {
             _cell('GRADE / SPEC', isHeader: true),
             _cell('PACKAGING', isHeader: true),
             _cell('MOQ', isHeader: true, align: pw.TextAlign.center),
-            _cell('FOB MUNDRA (USD/MT)', isHeader: true, align: pw.TextAlign.right),
+            _cell('OFFER RATE', isHeader: true, align: pw.TextAlign.right),
           ],
         ),
         // Table Rows
@@ -155,8 +155,9 @@ class PricePdfService {
           final isEven = idx % 2 == 0;
           final rowBg = isEven ? PdfColors.white : PdfColor.fromHex('F8FAFC');
 
+          final isINR = p.currency.contains('₹') || p.currency.toUpperCase().contains('INR');
           final priceStr = p.currentPrice > 0
-              ? '\$${p.currentPrice.toStringAsFixed(0)}'
+              ? (isINR ? 'Rs. ${p.currentPrice.toStringAsFixed(0)} / kg' : '\$${p.currentPrice.toStringAsFixed(0)} / MT')
               : 'On Request';
 
           return pw.TableRow(
@@ -166,7 +167,7 @@ class PricePdfService {
               _cell(p.name, isBold: true, fontSize: 8),
               _cell(p.grade.isNotEmpty ? p.grade : '-', fontSize: 7.5),
               _cell(p.packing.isNotEmpty ? p.packing : '20/25 kg Bag', fontSize: 7.5),
-              _cell(p.moq.isNotEmpty ? p.moq : '1 FCL', align: pw.TextAlign.center, fontSize: 7.5),
+              _cell(p.moq.isNotEmpty ? p.moq : '1000 kg', align: pw.TextAlign.center, fontSize: 7.5),
               _cell(priceStr, align: pw.TextAlign.right, isBold: true, fontSize: 8.5, color: PdfColor.fromHex('0F766E')),
             ],
           );

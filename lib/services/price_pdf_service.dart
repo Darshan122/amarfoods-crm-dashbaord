@@ -222,12 +222,12 @@ class PricePdfService {
     PdfColor? color,
   }) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3.2),
       child: pw.Text(
         text,
         textAlign: align,
         style: pw.TextStyle(
-          fontSize: isHeader ? 7.5 : fontSize,
+          fontSize: isHeader ? 7.2 : fontSize,
           fontWeight: (isHeader || isBold) ? pw.FontWeight.bold : pw.FontWeight.normal,
           color: isHeader ? PdfColors.white : (color ?? PdfColors.black),
         ),
@@ -237,7 +237,7 @@ class PricePdfService {
 
   static pw.Widget _buildCommercialTerms() {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(10),
+      padding: const pw.EdgeInsets.all(8),
       decoration: pw.BoxDecoration(
         color: PdfColor.fromHex('F8FAFC'),
         border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
@@ -249,12 +249,12 @@ class PricePdfService {
           pw.Text(
             'STANDARD COMMERCIAL TERMS & CONDITIONS',
             style: pw.TextStyle(
-              fontSize: 8.5,
+              fontSize: 8,
               fontWeight: pw.FontWeight.bold,
               color: PdfColor.fromHex('0F766E'),
             ),
           ),
-          pw.SizedBox(height: 5),
+          pw.SizedBox(height: 4),
           pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
@@ -268,12 +268,12 @@ class PricePdfService {
                   ],
                 ),
               ),
-              pw.SizedBox(width: 16),
+              pw.SizedBox(width: 14),
               pw.Expanded(
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _termItem('Quality Standards', '100% Pure Dehydrated Products; In-house COA included (BRC / FSSAI / Halal)'),
+                    _termItem('Quality Standards', 'Quoted prices are for 100% Export Quality (Optical/Machine Sorted). Commercial/Unsorted grades also available on request.'),
                     _termItem('Dispatch & Transport', 'Available across all India or Mundra/Pipavav seaport on actual freight basis'),
                   ],
                 ),

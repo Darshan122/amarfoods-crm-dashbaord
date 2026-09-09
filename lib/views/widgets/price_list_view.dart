@@ -203,7 +203,7 @@ class _PriceListViewState extends State<PriceListView> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    // Sync / Reset 20 Products Button
+                    // Sync / Reset 24 Products Button
                     TextButton.icon(
                       onPressed: () async {
                         final confirm = await showDialog<bool>(
@@ -214,11 +214,11 @@ class _PriceListViewState extends State<PriceListView> {
                               children: [
                                 Icon(Icons.currency_rupee_rounded, color: Color(0xFF0F766E)),
                                 SizedBox(width: 8),
-                                Text('Sync 20 Products (₹ / kg)'),
+                                Text('Sync 24 Products (₹ / kg)'),
                               ],
                             ),
                             content: const Text(
-                              'This will load all 20 exact products (White Onion, Red Onion, Pink Onion, and Garlic) at current Ex-Factory rates in Indian Rupees (₹ / kg) and sync them to your Google Sheet.\n\nDo you want to proceed?',
+                              'This will load all 24 products with Sorted (Export Quality) & Unsorted (Commercial) Flakes across White Onion, Red Onion, Pink Onion, and Garlic in Indian Rupees (₹ / kg) and sync them to your Google Sheet.\n\nDo you want to proceed?',
                             ),
                             actions: [
                               TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
@@ -235,7 +235,7 @@ class _PriceListViewState extends State<PriceListView> {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('✅ Successfully loaded all 20 products in ₹ / kg!'),
+                                content: Text('✅ Successfully loaded all 24 products in ₹ / kg!'),
                                 backgroundColor: Color(0xFF15803D),
                               ),
                             );
@@ -243,7 +243,7 @@ class _PriceListViewState extends State<PriceListView> {
                         }
                       },
                       icon: const Icon(Icons.currency_rupee_rounded, size: 15, color: Color(0xFFCCFBF1)),
-                      label: const Text('Sync 20 Items (₹)', style: TextStyle(color: Color(0xFFCCFBF1), fontWeight: FontWeight.bold, fontSize: 12)),
+                      label: const Text('Sync 24 Items (₹)', style: TextStyle(color: Color(0xFFCCFBF1), fontWeight: FontWeight.bold, fontSize: 12)),
                       style: TextButton.styleFrom(
                         backgroundColor: Colors.white.withValues(alpha: 0.1),
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),

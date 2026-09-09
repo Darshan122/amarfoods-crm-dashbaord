@@ -57,113 +57,101 @@ class _PriceListViewState extends State<PriceListView> {
                 ),
               ],
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.currency_rupee_rounded, color: Colors.white, size: 28),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= 1280;
+
+                final headerInfo = Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.currency_rupee_rounded, color: Colors.white, size: 28),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 10,
+                            runSpacing: 8,
+                            children: [
+                              const Text(
+                                'Product Price List & Weekly Quotations',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFCCFBF1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.verified_rounded, size: 13, color: Color(0xFF0F766E)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      activeWeekLabel.isNotEmpty ? activeWeekLabel : 'Daily Spot Rate',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0F766E),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF3C7),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.currency_rupee_rounded, size: 12, color: Color(0xFF92400E)),
+                                    SizedBox(width: 3),
+                                    Text(
+                                      'Ex-Factory Rate',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF92400E),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
                           const Text(
-                            'Product Price List & Weekly Quotations',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFCCFBF1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.verified_rounded, size: 13, color: Color(0xFF0F766E)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  activeWeekLabel,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0F766E),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.currency_rupee_rounded, size: 12, color: Color(0xFF92400E)),
-                                SizedBox(width: 3),
-                                Text(
-                                  'Ex-Factory Rate',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF92400E),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEE2E2),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.trending_up_rounded, size: 12, color: Color(0xFFB91C1C)),
-                                SizedBox(width: 3),
-                                Text(
-                                  'Daily Spot Basis',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFFB91C1C),
-                                  ),
-                                ),
-                              ],
-                            ),
+                            'Weekly Ex-Factory (Mahuva) price tracking in Indian Rupees (₹ / kg) with automatic Google Sheets history sync and 1-click PDF quotations.',
+                            style: TextStyle(color: Color(0xFFCCFBF1), fontSize: 13),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Weekly Ex-Factory (Mahuva) price tracking in Indian Rupees (₹ / kg) with automatic Google Sheets history sync and 1-click PDF quotations.',
-                        style: TextStyle(color: Color(0xFFCCFBF1), fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-                Wrap(
+                    ),
+                  ],
+                );
+
+                final actionButtons = Wrap(
                   spacing: 10,
-                  runSpacing: 8,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     // PDF Download Button
                     ElevatedButton.icon(
@@ -198,7 +186,7 @@ class _PriceListViewState extends State<PriceListView> {
                       label: const Text('Update Weekly Prices', style: TextStyle(fontWeight: FontWeight.bold)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white),
+                        side: const BorderSide(color: Colors.white, width: 1.2),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
@@ -210,7 +198,7 @@ class _PriceListViewState extends State<PriceListView> {
                       label: const Text('Add Product', style: TextStyle(fontWeight: FontWeight.bold)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFCCFBF1),
-                        side: const BorderSide(color: Color(0xFF5EEAD4)),
+                        side: const BorderSide(color: Color(0xFF5EEAD4), width: 1.2),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
@@ -230,7 +218,7 @@ class _PriceListViewState extends State<PriceListView> {
                               ],
                             ),
                             content: const Text(
-                              'This will load all 24 products with Sorted (Export Quality) & Unsorted (Commercial) Flakes across White Onion, Red Onion, Pink Onion, and Garlic in Indian Rupees (₹ / kg) and sync them to your Google Sheet.\n\nDo you want to proceed?',
+                              'This will load all 24 official products with Sorted (Export Quality) & Unsorted (Commercial) Flakes across White Onion, Red Onion, Pink Onion, and Garlic in Indian Rupees (₹ / kg) and sync them to your Google Sheet.\n\nDo you want to proceed?',
                             ),
                             actions: [
                               TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
@@ -257,20 +245,45 @@ class _PriceListViewState extends State<PriceListView> {
                       icon: const Icon(Icons.currency_rupee_rounded, size: 15, color: Color(0xFFCCFBF1)),
                       label: const Text('Sync 24 Items (₹)', style: TextStyle(color: Color(0xFFCCFBF1), fontWeight: FontWeight.bold, fontSize: 12)),
                       style: TextButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.1),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        backgroundColor: Colors.white.withValues(alpha: 0.12),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                     // Refresh Button
                     IconButton(
                       tooltip: 'Refresh from Google Sheets',
-                      icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                      icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 22),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.1),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.all(10),
+                      ),
                       onPressed: () => p.loadPrices(forceRefresh: true),
                     ),
                   ],
-                ),
-              ],
+                );
+
+                if (isWide) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(child: headerInfo),
+                      const SizedBox(width: 20),
+                      actionButtons,
+                    ],
+                  );
+                } else {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      headerInfo,
+                      const SizedBox(height: 16),
+                      actionButtons,
+                    ],
+                  );
+                }
+              },
             ),
           ),
           const SizedBox(height: 16),
@@ -367,10 +380,11 @@ class _PriceListViewState extends State<PriceListView> {
           const SizedBox(height: 24),
 
           // ─── VIEW TOGGLE & CATEGORY SELECTOR ─────────────────────────────
-          Row(
-            children: [
-              // View Mode Toggle (Active Price List vs Weekly History Log)
-              Container(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 960;
+
+              final viewToggle = Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(10),
@@ -397,42 +411,62 @@ class _PriceListViewState extends State<PriceListView> {
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 16),
-              // Category Filter Pills (when on Active Price List view)
-              if (!_showHistoryView) ...[
-                const Spacer(),
-                Wrap(
-                  spacing: 8,
+              );
+
+              final categoryFilter = Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  'All',
+                  'White Onion',
+                  'Red Onion',
+                  'Pink Onion',
+                  'Garlic',
+                ].map((cat) {
+                  final isSel = p.priceCategoryFilter.toLowerCase() == cat.toLowerCase();
+                  return ChoiceChip(
+                    label: Text(
+                      cat == 'All' ? 'All (${prices.length})' : cat,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                        color: isSel ? Colors.white : const Color(0xFF475569),
+                      ),
+                    ),
+                    selected: isSel,
+                    selectedColor: const Color(0xFF0F766E),
+                    backgroundColor: Colors.white,
+                    side: BorderSide(
+                      color: isSel ? const Color(0xFF0F766E) : const Color(0xFFCBD5E1),
+                    ),
+                    onSelected: (_) => p.setPriceCategoryFilter(cat),
+                  );
+                }).toList(),
+              );
+
+              if (isWide) {
+                return Row(
                   children: [
-                    'All',
-                    'White Onion',
-                    'Red Onion',
-                    'Pink Onion',
-                    'Garlic',
-                  ].map((cat) {
-                    final isSel = p.priceCategoryFilter.toLowerCase() == cat.toLowerCase();
-                    return ChoiceChip(
-                      label: Text(
-                        cat == 'All' ? 'All (${prices.length})' : cat,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
-                          color: isSel ? Colors.white : const Color(0xFF475569),
-                        ),
-                      ),
-                      selected: isSel,
-                      selectedColor: const Color(0xFF0F766E),
-                      backgroundColor: Colors.white,
-                      side: BorderSide(
-                        color: isSel ? const Color(0xFF0F766E) : const Color(0xFFCBD5E1),
-                      ),
-                      onSelected: (_) => p.setPriceCategoryFilter(cat),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ],
+                    viewToggle,
+                    if (!_showHistoryView) ...[
+                      const Spacer(),
+                      categoryFilter,
+                    ],
+                  ],
+                );
+              } else {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    viewToggle,
+                    if (!_showHistoryView) ...[
+                      const SizedBox(height: 12),
+                      categoryFilter,
+                    ],
+                  ],
+                );
+              }
+            },
           ),
           const SizedBox(height: 18),
 

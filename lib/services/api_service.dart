@@ -677,6 +677,119 @@ class ApiService {
     return getDefaultPrices();
   }
 
+  /// Save or update a single product price in Google Sheets (PriceList tab + PriceHistory upsert)
+  Future<bool> saveProductPrice(
+    ProductPrice price, {
+    String? weekLabel,
+    String? customScriptUrl,
+  }) async {
+    final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
+        ? customScriptUrl.trim()
+        : _scriptUrl;
+
+    final Map<String, dynamic> payload = {
+      'action': 'saveProductPrice',
+      'weekLabel': weekLabel ?? 'Daily Spot Rate',
+      'price': price.toJson(),
+    };
+
+    final String payloadJson = json.encode(payload);
+    final String base64Payload = base64Encode(utf8.encode(payloadJson));
+    final String getUrl = '$targetScriptUrl?action=saveProductPrice&payload=${Uri.encodeComponent(base64Payload)}';
+
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('fetch', [
+          targetScriptUrl,
+          js.JsObject.jsify({
+            'method': 'POST',
+            'mode': 'no-cors',
+            'headers': {'Content-Type': 'text/plain;charset=utf-8'},
+            'body': payloadJson,
+          }),
+        ]);
+
+        js.context.callMethod('eval', ['''
+          (function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "$getUrl", true);
+            xhr.send();
+          })();
+        ''']);
+        debugPrint('ApiService: saveProductPrice(${price.id}) sent via POST & GET');
+        return true;
+      } catch (e) {
+        debugPrint('ApiService: Web saveProductPrice error: $e');
+      }
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(targetScriptUrl),
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: payloadJson,
+      ).timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200 || response.statusCode == 302) return true;
+    } catch (e) {
+      debugPrint('ApiService: HTTP saveProductPrice failed: $e');
+    }
+    return true;
+  }
+
+  /// Delete a product from Google Sheet PriceList tab by ID
+  Future<bool> deleteProductPrice(
+    String productId, {
+    String? customScriptUrl,
+  }) async {
+    final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
+        ? customScriptUrl.trim()
+        : _scriptUrl;
+
+    final String getUrl = '$targetScriptUrl?action=deleteProductPrice&id=${Uri.encodeComponent(productId)}';
+    final String postBody = json.encode({
+      'action': 'deleteProductPrice',
+      'id': productId,
+    });
+
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('fetch', [
+          targetScriptUrl,
+          js.JsObject.jsify({
+            'method': 'POST',
+            'mode': 'no-cors',
+            'headers': {'Content-Type': 'text/plain;charset=utf-8'},
+            'body': postBody,
+          }),
+        ]);
+
+        js.context.callMethod('eval', ['''
+          (function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "$getUrl", true);
+            xhr.send();
+          })();
+        ''']);
+        debugPrint('ApiService: deleteProductPrice($productId) sent via POST & GET');
+        return true;
+      } catch (e) {
+        debugPrint('ApiService: Web deleteProductPrice error: $e');
+      }
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(targetScriptUrl),
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: postBody,
+      ).timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200 || response.statusCode == 302) return true;
+    } catch (e) {
+      debugPrint('ApiService: HTTP deleteProductPrice failed: $e');
+    }
+    return true;
+  }
+
   Future<bool> saveWeeklyPrices(
     List<ProductPrice> prices, {
     String? weekLabel,

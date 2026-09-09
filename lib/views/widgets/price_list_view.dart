@@ -203,6 +203,18 @@ class _PriceListViewState extends State<PriceListView> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
+                    // Add Product Button
+                    OutlinedButton.icon(
+                      onPressed: () => _showAddProductDialog(context, p, activeWeekLabel),
+                      icon: const Icon(Icons.add_rounded, size: 16),
+                      label: const Text('Add Product', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFCCFBF1),
+                        side: const BorderSide(color: Color(0xFF5EEAD4)),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
                     // Sync / Reset 24 Products Button
                     TextButton.icon(
                       onPressed: () async {
@@ -761,17 +773,28 @@ class _PriceListViewState extends State<PriceListView> {
                         ),
                       ),
                     ),
-                    // Action: Edit
+                    // Action: Edit & Delete
                     SizedBox(
-                      width: 90,
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () => _showSingleEditDialog(context, p, item, weekLabel),
-                          icon: const Icon(Icons.edit_outlined, size: 14, color: Color(0xFF0F766E)),
-                          label: const Text('Edit', style: TextStyle(fontSize: 11, color: Color(0xFF0F766E), fontWeight: FontWeight.bold)),
-                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
-                        ),
+                      width: 80,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          IconButton(
+                            tooltip: 'Edit Product',
+                            icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF0F766E)),
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(),
+                            onPressed: () => _showSingleEditDialog(context, p, item, weekLabel),
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            tooltip: 'Delete Product',
+                            icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(),
+                            onPressed: () => _confirmDeleteProduct(context, p, item),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -1224,11 +1247,175 @@ class _PriceListViewState extends State<PriceListView> {
                 moq: moqCtrl.text.trim(),
                 lastUpdated: DateTime.now().toLocal().toString().split(' ')[0],
               );
-              final allList = p.prices.map((x) => x.id == item.id ? updated : x).toList();
-              p.updateWeeklyPrices(allList, weekLabel: weekLabel);
+              p.saveProductPrice(updated, weekLabel: weekLabel);
               Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('✅ Price for ${item.name} saved and synced to Google Sheet!'),
+                  backgroundColor: const Color(0xFF15803D),
+                ),
+              );
             },
             child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── ADD NEW PRODUCT DIALOG ──────────────────────────────────────────────
+  void _showAddProductDialog(BuildContext context, BuyerProvider p, String weekLabel) {
+    final nameCtrl = TextEditingController();
+    String selectedCategory = 'White Onion';
+    final specCtrl = TextEditingController(text: 'Export Quality');
+    final packingCtrl = TextEditingController(text: '20 kg Bag');
+    final moqCtrl = TextEditingController(text: '1000 kg');
+    final priceCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: const Row(
+            children: [
+              Icon(Icons.add_circle_outline_rounded, color: Color(0xFF0F766E)),
+              SizedBox(width: 8),
+              Text('Add New Product', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Product Name *', hintText: 'e.g. White Onion Flakes (Sorted)'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: const InputDecoration(labelText: 'Category'),
+                  items: const [
+                    DropdownMenuItem(value: 'White Onion', child: Text('White Onion')),
+                    DropdownMenuItem(value: 'Red Onion', child: Text('Red Onion')),
+                    DropdownMenuItem(value: 'Pink Onion', child: Text('Pink Onion')),
+                    DropdownMenuItem(value: 'Garlic', child: Text('Garlic')),
+                    DropdownMenuItem(value: 'Spices', child: Text('Spices')),
+                    DropdownMenuItem(value: 'General', child: Text('General')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setDialogState(() => selectedCategory = val);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: priceCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Ex-Factory Rate * (₹ / kg)',
+                    prefixText: '₹ ',
+                    hintText: 'e.g. 185',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: specCtrl,
+                  decoration: const InputDecoration(labelText: 'Grade / Specification', hintText: 'e.g. A-Grade (Optical Sorted)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: packingCtrl,
+                  decoration: const InputDecoration(labelText: 'Packaging', hintText: 'e.g. 14 kg Bag or 25 kg Bag'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: moqCtrl,
+                  decoration: const InputDecoration(labelText: 'MOQ', hintText: 'e.g. 1000 kg'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F766E), foregroundColor: Colors.white),
+              onPressed: () {
+                final name = nameCtrl.text.trim();
+                final price = double.tryParse(priceCtrl.text.trim()) ?? 0;
+                if (name.isEmpty || price <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid product name and rate.')),
+                  );
+                  return;
+                }
+                String prefix = 'PRD';
+                if (selectedCategory == 'White Onion') prefix = 'WO';
+                if (selectedCategory == 'Red Onion') prefix = 'RO';
+                if (selectedCategory == 'Pink Onion') prefix = 'PO';
+                if (selectedCategory == 'Garlic') prefix = 'GA';
+                final newId = '$prefix-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+                final newProduct = ProductPrice(
+                  id: newId,
+                  category: selectedCategory,
+                  name: name,
+                  grade: specCtrl.text.trim(),
+                  packing: packingCtrl.text.trim().isNotEmpty ? packingCtrl.text.trim() : '20 kg Bag',
+                  currency: '₹ / kg',
+                  currentPrice: price,
+                  prevPrice: price,
+                  moq: moqCtrl.text.trim().isNotEmpty ? moqCtrl.text.trim() : '1000 kg',
+                  validity: weekLabel,
+                  lastUpdated: DateTime.now().toLocal().toString().split(' ')[0],
+                );
+                p.saveProductPrice(newProduct, weekLabel: weekLabel);
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('✅ Added "$name" and synced to Google Sheet!'),
+                    backgroundColor: const Color(0xFF15803D),
+                  ),
+                );
+              },
+              child: const Text('Add Product'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── CONFIRM DELETE PRODUCT DIALOG ───────────────────────────────────────
+  void _confirmDeleteProduct(BuildContext context, BuyerProvider p, ProductPrice item) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_outline_rounded, color: Color(0xFFDC2626)),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Delete ${item.name}?', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to remove "${item.name}" from the active price catalog and Google Sheets?\n\nThis will remove it from future quotations.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
+            onPressed: () {
+              p.deleteProductPrice(item.id);
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('🗑️ Removed "${item.name}" from Google Sheet.'),
+                  backgroundColor: const Color(0xFFB91C1C),
+                ),
+              );
+            },
+            child: const Text('Delete'),
           ),
         ],
       ),

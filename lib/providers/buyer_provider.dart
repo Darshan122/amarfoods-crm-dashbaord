@@ -929,34 +929,22 @@ class BuyerProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final remotePrices = await _apiService.fetchPrices();
-      final bool hasOldUsd = remotePrices.any((p) =>
-          p.currency.contains('USD') ||
-          p.id.startsWith('ON-') ||
-          p.id.startsWith('GAR-') ||
-          p.id.startsWith('SPC-'));
-
-      if (remotePrices.isNotEmpty && !hasOldUsd && remotePrices.length >= 15) {
-        _prices = remotePrices;
+      if (remotePrices.isNotEmpty) {
+        _prices = remotePrices.map((p) {
+          if (p.currency.isEmpty || p.currency.contains('USD')) {
+            return p.copyWith(currency: '₹ / kg');
+          }
+          return p;
+        }).toList();
       } else {
         final prefs = await SharedPreferences.getInstance();
         final String? jsonStr = prefs.getString(_localPricesKey);
         if (jsonStr != null && jsonStr.isNotEmpty) {
           final List<dynamic> decoded = jsonDecode(jsonStr);
-          final localList = decoded.map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map))).toList();
-          final bool localHasOldUsd = localList.any((p) =>
-              p.currency.contains('USD') ||
-              p.id.startsWith('ON-') ||
-              p.id.startsWith('GAR-') ||
-              p.id.startsWith('SPC-'));
-          if (localList.isNotEmpty && !localHasOldUsd && localList.length >= 15) {
-            _prices = localList;
-          } else {
-            _prices = ApiService.getDefaultPrices();
-            _apiService.saveWeeklyPrices(_prices, weekLabel: 'Valid for 7 Days Only');
-          }
+          _prices = decoded.map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map))).toList();
         } else {
           _prices = ApiService.getDefaultPrices();
-          _apiService.saveWeeklyPrices(_prices, weekLabel: 'Valid for 7 Days Only');
+          _apiService.saveWeeklyPrices(_prices, weekLabel: 'Daily Spot Rate');
         }
       }
       await _saveLocalPrices();
@@ -977,7 +965,7 @@ class BuyerProvider extends ChangeNotifier {
     try {
       _prices = ApiService.getDefaultPrices();
       await _saveLocalPrices();
-      await _apiService.saveWeeklyPrices(_prices, weekLabel: 'Valid for 7 Days Only');
+      await _apiService.saveWeeklyPrices(_prices, weekLabel: 'Daily Spot Rate');
       await loadPriceHistory();
     } catch (e) {
       debugPrint('BuyerProvider: resetToDefault20Prices error: $e');
@@ -997,6 +985,33 @@ class BuyerProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('BuyerProvider: Error loading price history: $e');
     }
+  }
+
+  /// Save or update a single product price (instant Google Sheet sync + PriceHistory upsert)
+  Future<bool> saveProductPrice(ProductPrice price, {String? weekLabel}) async {
+    final idx = _prices.indexWhere((p) => p.id == price.id);
+    if (idx >= 0) {
+      _prices[idx] = price;
+    } else {
+      _prices.add(price);
+    }
+    await _saveLocalPrices();
+    notifyListeners();
+
+    final ok = await _apiService.saveProductPrice(price, weekLabel: weekLabel);
+    await loadPriceHistory();
+    return ok;
+  }
+
+  /// Delete a product price from Google Sheet and local state
+  Future<bool> deleteProductPrice(String productId) async {
+    _prices.removeWhere((p) => p.id == productId);
+    await _saveLocalPrices();
+    notifyListeners();
+
+    final ok = await _apiService.deleteProductPrice(productId);
+    await loadPriceHistory();
+    return ok;
   }
 
   Future<bool> updateWeeklyPrices(List<ProductPrice> updatedPrices, {String? weekLabel}) async {

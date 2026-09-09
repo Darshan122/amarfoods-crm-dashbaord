@@ -138,10 +138,10 @@ class _PriceListViewState extends State<PriceListView> {
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.timer_outlined, size: 12, color: Color(0xFFB91C1C)),
+                                Icon(Icons.trending_up_rounded, size: 12, color: Color(0xFFB91C1C)),
                                 SizedBox(width: 3),
                                 Text(
-                                  'Valid 7 Days Only',
+                                  'Daily Spot Basis',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -300,7 +300,7 @@ class _PriceListViewState extends State<PriceListView> {
                           style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, color: Color(0xFF78350F)),
                         ),
                         TextSpan(
-                          text: 'All prices quoted are EX-FACTORY rates (Mahuva, Gujarat) in Indian Rupees (₹ / kg) and STRICTLY VALID FOR 7 DAYS ONLY from current week. Customized packaging is available as per buyer requirement.',
+                          text: 'Due to daily raw material market fluctuations, all prices are quoted on a daily spot basis (Ex-Factory Mahuva in ₹ / kg) and are subject to final reconfirmation at the time of order booking. Customized packaging is available as per buyer requirement.',
                           style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
                         ),
                       ],

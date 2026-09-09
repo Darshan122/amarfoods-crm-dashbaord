@@ -112,7 +112,7 @@ class PricePdfService {
                     style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
                   ),
                   pw.Text(
-                    'Basis: Ex-Factory Mahuva | Valid: 7 Days Only',
+                    'Basis: Ex-Factory Mahuva | Daily Spot Basis',
                     style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700),
                   ),
                 ],
@@ -148,7 +148,7 @@ class PricePdfService {
             ),
             pw.TextSpan(
               text:
-                  'All quoted prices are EX-FACTORY (Mahuva, Gujarat) rates in Indian Rupees (INR / Rs. per kg) and STRICTLY VALID FOR 7 DAYS ONLY from current week.',
+                  'Due to daily raw material market fluctuations, all prices are quoted on a daily spot basis (Ex-Factory Mahuva in INR / Rs. per kg) and are subject to final reconfirmation at the time of order booking.',
               style: pw.TextStyle(
                 fontSize: 8.5,
                 fontWeight: pw.FontWeight.bold,
@@ -263,7 +263,7 @@ class PricePdfService {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     _termItem('Price Basis', 'Ex-Factory Mahuva (Gujarat, India) - GST & Freight extra as applicable'),
-                    _termItem('Price Validity', 'Strictly valid for 7 days only from current week'),
+                    _termItem('Price Validity', 'Quoted on daily spot basis; subject to market fluctuations & final reconfirmation upon booking'),
                     _termItem('Customized Packing', 'Packaging can be customized as per buyer\'s requirement'),
                   ],
                 ),

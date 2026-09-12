@@ -291,4 +291,128 @@ class Buyer {
     }
     return DateFormat('yyyy-MM-dd').format(next);
   }
+
+  // ---------------------------------------------------------------------------
+  // DUPLICATE DETECTION & NORMALIZATION HELPERS
+  // ---------------------------------------------------------------------------
+
+  /// Normalizes company name by stripping legal suffixes, punctuation, and extra whitespace.
+  static String normalizeCompany(String name) {
+    String s = name.trim().toLowerCase();
+    if (s.isEmpty || s == 'n/a' || s == '-' || s.startsWith('importer #')) {
+      return '';
+    }
+    // Remove punctuation
+    s = s.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
+    // Remove legal corporate suffixes (inc, ltd, llc, pvt, corp, co, etc.)
+    s = s.replaceAll(
+      RegExp(r'\b(sole member co ltd|company limited|company ltd|pvt ltd|private limited|corp|corporation|inc|incorporated|ltd|limited|llc|pvt|co)\b'),
+      ' ',
+    );
+    // Collapse whitespace
+    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return s;
+  }
+
+  /// Extracts root host/domain from a website URL.
+  static String normalizeDomain(String url) {
+    String s = url.trim().toLowerCase();
+    if (s.isEmpty || s == 'n/a' || s == '-' || s.contains('@')) return '';
+    s = s.replaceAll('https://', '').replaceAll('http://', '').replaceAll('www.', '');
+    // Strip trailing paths, queries, fragments
+    s = s.split('/')[0].split('?')[0].split('#')[0].trim();
+    if (s.length < 4 || !s.contains('.')) return '';
+    return s;
+  }
+
+  /// Extracts a list of clean email addresses from a comma/semicolon/slash string.
+  static List<String> extractEmails(String emailField) {
+    if (emailField.trim().isEmpty) return [];
+    final split = emailField.split(RegExp(r'[,;/\s]+'));
+    final List<String> results = [];
+    for (var raw in split) {
+      final clean = raw.replaceAll('"', '').replaceAll("'", '').trim().toLowerCase();
+      if (clean.contains('@') &&
+          !clean.startsWith('n/a') &&
+          !clean.startsWith('-') &&
+          !results.contains(clean)) {
+        results.add(clean);
+      }
+    }
+    return results;
+  }
+
+  /// Strips all non-digit characters from phone number.
+  static String cleanPhoneDigits(String phoneField) {
+    String s = phoneField.replaceAll(RegExp(r'\D'), '');
+    // Remove leading zeros if any
+    return s.replaceFirst(RegExp(r'^0+'), '');
+  }
+
+  /// Checks if this buyer represents the same business entity as [other]
+  /// based on normalized company name, shared email, matching website domain, or phone.
+  bool matchesDuplicate(Buyer other) {
+    if (identical(this, other)) return false;
+
+    // 1. Normalized company name match (min 3 chars)
+    final normA = normalizeCompany(company);
+    final normB = normalizeCompany(other.company);
+    if (normA.isNotEmpty && normB.isNotEmpty && normA.length >= 3 && normB.length >= 3) {
+      if (normA == normB) return true;
+    }
+
+    // 2. Email match (any shared email address)
+    final emailsA = extractEmails(email);
+    final emailsB = extractEmails(other.email);
+    for (final emA in emailsA) {
+      if (emailsB.contains(emA)) return true;
+    }
+
+    // 3. Website domain match (min 4 chars)
+    final domA = normalizeDomain(website);
+    final domB = normalizeDomain(other.website);
+    if (domA.isNotEmpty && domB.isNotEmpty && domA.length >= 4 && domB.length >= 4) {
+      if (domA == domB) return true;
+    }
+
+    // 4. Phone digits match (min 8 digits)
+    final phA = cleanPhoneDigits(phone);
+    final phB = cleanPhoneDigits(other.phone);
+    if (phA.isNotEmpty && phB.isNotEmpty && phA.length >= 8 && phB.length >= 8) {
+      if (phA == phB || phA.endsWith(phB) || phB.endsWith(phA)) return true;
+    }
+
+    return false;
+  }
+
+  /// Returns a human-friendly string describing why [other] is considered a duplicate.
+  String getDuplicateReason(Buyer other) {
+    final normA = normalizeCompany(company);
+    final normB = normalizeCompany(other.company);
+    if (normA.isNotEmpty && normB.isNotEmpty && normA == normB) {
+      return 'Matching Company Name ("$company")';
+    }
+
+    final emailsA = extractEmails(email);
+    final emailsB = extractEmails(other.email);
+    for (final emA in emailsA) {
+      if (emailsB.contains(emA)) {
+        return 'Matching Email Address ($emA)';
+      }
+    }
+
+    final domA = normalizeDomain(website);
+    final domB = normalizeDomain(other.website);
+    if (domA.isNotEmpty && domB.isNotEmpty && domA == domB) {
+      return 'Matching Website Domain ($domA)';
+    }
+
+    final phA = cleanPhoneDigits(phone);
+    final phB = cleanPhoneDigits(other.phone);
+    if (phA.isNotEmpty && phB.isNotEmpty && (phA == phB || phA.endsWith(phB) || phB.endsWith(phA))) {
+      return 'Matching Phone Number (${other.phone})';
+    }
+
+    return 'Duplicate lead data';
+  }
 }

@@ -618,33 +618,20 @@ class _BuyerDialogState extends State<BuyerDialog> {
       marketType: _marketType,
     );
 
-    bool isEditing = widget.buyer != null;
-
-    if (!isEditing) {
-      Buyer? duplicate;
-      for (var b in widget.existingBuyers) {
-        bool isRealEmail = emailStr.isNotEmpty &&
-            emailStr != '-' &&
-            emailStr.toLowerCase() != 'n/a' &&
-            emailStr.contains('@');
-        bool isRealCompany = companyName.isNotEmpty &&
-            companyName != '-' &&
-            companyName.toLowerCase() != 'n/a' &&
-            !companyName.toLowerCase().startsWith('importer #');
-
-        bool companyMatch = isRealCompany && companyName.toLowerCase() == b.company.trim().toLowerCase();
-        bool emailMatch = isRealEmail && b.email.toLowerCase().split(RegExp(r'[,;/]\s*')).where((e) => e.contains('@')).contains(emailStr.toLowerCase());
-
-        if (companyMatch || emailMatch) {
-          duplicate = b;
-          break;
-        }
+    Buyer? duplicate;
+    for (var b in widget.existingBuyers) {
+      if (widget.buyer != null && (b.id == widget.buyer!.id || b.srNo == widget.buyer!.srNo)) {
+        continue; // Skip self when editing
       }
-
-      if (duplicate != null) {
-        _showDuplicateWarningDialog(context, duplicate, newBuyer);
-        return;
+      if (newBuyer.matchesDuplicate(b)) {
+        duplicate = b;
+        break;
       }
+    }
+
+    if (duplicate != null) {
+      _showDuplicateWarningDialog(context, duplicate, newBuyer);
+      return;
     }
 
     widget.onSave(newBuyer);
@@ -652,17 +639,22 @@ class _BuyerDialogState extends State<BuyerDialog> {
   }
 
   void _showDuplicateWarningDialog(BuildContext parentContext, Buyer existing, Buyer newBuyer) {
+    final String reason = newBuyer.getDuplicateReason(existing);
+
     showDialog(
       context: parentContext,
+      barrierDismissible: false,
       builder: (dialogCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: const [
             Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 28),
             SizedBox(width: 10),
-            Text(
-              'Duplicate Lead Detected',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F172A)),
+            Expanded(
+              child: Text(
+                'Duplicate Lead Detected',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F172A)),
+              ),
             ),
           ],
         ),
@@ -674,18 +666,23 @@ class _BuyerDialogState extends State<BuyerDialog> {
               text: TextSpan(
                 style: const TextStyle(color: Color(0xFF334155), fontSize: 14, height: 1.5),
                 children: [
-                  const TextSpan(text: 'An importer named '),
+                  const TextSpan(text: 'This lead matches an existing record via '),
                   TextSpan(
-                    text: '"${existing.company}" ',
+                    text: '$reason.\n\n',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                  ),
+                  const TextSpan(text: 'Existing Company: '),
+                  TextSpan(
+                    text: '"${existing.company}"\n',
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                   ),
-                  const TextSpan(text: 'already exists in your CRM at '),
+                  const TextSpan(text: 'Position in CRM: '),
                   TextSpan(
-                    text: 'Sr. No. #${existing.srNo}',
+                    text: 'Sr. No. #${existing.srNo} (${existing.id})',
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B2C69)),
                   ),
-                  if (existing.email.isNotEmpty) TextSpan(text: ' (${existing.email})'),
-                  const TextSpan(text: '.'),
+                  if (existing.email.isNotEmpty) TextSpan(text: '\nEmail: ${existing.email}'),
+                  if (existing.phone.isNotEmpty) TextSpan(text: '\nPhone: ${existing.phone}'),
                 ],
               ),
             ),
@@ -703,8 +700,8 @@ class _BuyerDialogState extends State<BuyerDialog> {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Would you like to merge contact details into the existing lead or save as a separate record?',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                      'To ensure data integrity, duplicate leads cannot be saved separately. Would you like to merge these contact details into the existing record?',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF92400E), height: 1.4),
                     ),
                   ),
                 ],
@@ -715,7 +712,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            child: const Text('Cancel / Edit', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -723,14 +720,22 @@ class _BuyerDialogState extends State<BuyerDialog> {
               foregroundColor: Colors.white,
             ),
             onPressed: () {
+              // Merge emails
               String combinedEmail = existing.email;
-              if (newBuyer.email.isNotEmpty && !combinedEmail.contains(newBuyer.email)) {
-                combinedEmail = combinedEmail.isEmpty ? newBuyer.email : '$combinedEmail, ${newBuyer.email}';
+              for (final em in Buyer.extractEmails(newBuyer.email)) {
+                if (!combinedEmail.toLowerCase().contains(em.toLowerCase())) {
+                  combinedEmail = combinedEmail.isEmpty ? em : '$combinedEmail, $em';
+                }
               }
+
+              // Merge phones
               String combinedPhone = existing.phone;
-              if (newBuyer.phone.isNotEmpty && !combinedPhone.contains(newBuyer.phone)) {
+              final newPhoneDigits = Buyer.cleanPhoneDigits(newBuyer.phone);
+              if (newPhoneDigits.isNotEmpty && !Buyer.cleanPhoneDigits(combinedPhone).contains(newPhoneDigits)) {
                 combinedPhone = combinedPhone.isEmpty ? newBuyer.phone : '$combinedPhone, ${newBuyer.phone}';
               }
+
+              // Merge notes
               String combinedNotes = existing.notes;
               if (newBuyer.notes.isNotEmpty && !combinedNotes.contains(newBuyer.notes)) {
                 combinedNotes = combinedNotes.isEmpty ? newBuyer.notes : '$combinedNotes | ${newBuyer.notes}';
@@ -748,14 +753,6 @@ class _BuyerDialogState extends State<BuyerDialog> {
               Navigator.pop(parentContext);
             },
             child: const Text('Merge into Existing Lead'),
-          ),
-          OutlinedButton(
-            onPressed: () {
-              Navigator.pop(dialogCtx);
-              widget.onSave(newBuyer);
-              Navigator.pop(parentContext);
-            },
-            child: const Text('Save as Separate Lead'),
           ),
         ],
       ),

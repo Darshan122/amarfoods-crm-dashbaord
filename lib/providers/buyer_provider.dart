@@ -331,6 +331,48 @@ class BuyerProvider extends ChangeNotifier {
     return count;
   }
 
+  /// Deduplicates buyers list by merging duplicate leads (company name, email, domain, phone)
+  List<Buyer> _deduplicateBuyers(List<Buyer> input) {
+    final List<Buyer> unique = [];
+    for (final b in input) {
+      final existingIndex = unique.indexWhere((u) => u.matchesDuplicate(b));
+      if (existingIndex >= 0) {
+        final existing = unique[existingIndex];
+
+        // Merge emails
+        String combinedEmail = existing.email;
+        for (final em in Buyer.extractEmails(b.email)) {
+          if (!combinedEmail.toLowerCase().contains(em.toLowerCase())) {
+            combinedEmail = combinedEmail.isEmpty ? em : '$combinedEmail, $em';
+          }
+        }
+
+        // Merge phone
+        String combinedPhone = existing.phone;
+        final newDigits = Buyer.cleanPhoneDigits(b.phone);
+        if (newDigits.isNotEmpty && !Buyer.cleanPhoneDigits(combinedPhone).contains(newDigits)) {
+          combinedPhone = combinedPhone.isEmpty ? b.phone : '$combinedPhone, ${b.phone}';
+        }
+
+        // Merge notes
+        String combinedNotes = existing.notes;
+        if (b.notes.isNotEmpty && !combinedNotes.contains(b.notes)) {
+          combinedNotes = combinedNotes.isEmpty ? b.notes : '$combinedNotes | ${b.notes}';
+        }
+
+        unique[existingIndex] = existing.copyWith(
+          email: combinedEmail,
+          phone: combinedPhone,
+          website: existing.website.isEmpty ? b.website : existing.website,
+          notes: combinedNotes,
+        );
+      } else {
+        unique.add(b);
+      }
+    }
+    return unique;
+  }
+
   Future<void> loadBuyers({bool forceRefresh = false}) async {
     _isLoading = true;
     _errorMessage = null;
@@ -341,10 +383,9 @@ class BuyerProvider extends ChangeNotifier {
 
       if (remote.isNotEmpty) {
         // Remote (Google Sheet) is the single source of truth.
-        // Always trust remote data. Sort by Sr. No. so display order matches sheet.
-        _buyers = remote;
+        // Deduplicate and ensure clean sequential numbering (1 to N).
+        _buyers = _deduplicateBuyers(remote);
         _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
-        // Ensure clean sequential numbering (1 to N) so Sr. No. and Total Count never mismatch
         for (int i = 0; i < _buyers.length; i++) {
           final seq = i + 1;
           if (_buyers[i].srNo != seq) {
@@ -357,7 +398,7 @@ class BuyerProvider extends ChangeNotifier {
       } else {
         // No remote data — fall back to local cache.
         final local = await _loadLocalBuyers();
-        _buyers = local;
+        _buyers = _deduplicateBuyers(local);
         _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
         for (int i = 0; i < _buyers.length; i++) {
           final seq = i + 1;
@@ -853,10 +894,13 @@ class BuyerProvider extends ChangeNotifier {
     if (index < 0 && buyer.id.isNotEmpty) {
       index = _buyers.indexWhere((b) => b.id == buyer.id);
     }
-    // NOTE: Do NOT fallback to company name — name can change during edit
-    // and would cause a brand-new row to be created.
 
     bool isEditing = index >= 0;
+    int dupIndex = -1;
+    if (!isEditing) {
+      dupIndex = _buyers.indexWhere((b) => buyer.matchesDuplicate(b));
+    }
+
     Buyer targetBuyer = buyer;
 
     if (isEditing) {
@@ -866,6 +910,34 @@ class BuyerProvider extends ChangeNotifier {
         srNo: _buyers[index].srNo,
       );
       _buyers[index] = targetBuyer;
+      _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
+      _rebuildCaches(preservePage: true);
+    } else if (dupIndex >= 0) {
+      // Merge into existing buyer to prevent any duplicate creation!
+      final existing = _buyers[dupIndex];
+      String combinedEmail = existing.email;
+      for (final em in Buyer.extractEmails(buyer.email)) {
+        if (!combinedEmail.toLowerCase().contains(em.toLowerCase())) {
+          combinedEmail = combinedEmail.isEmpty ? em : '$combinedEmail, $em';
+        }
+      }
+      String combinedPhone = existing.phone;
+      final newDigits = Buyer.cleanPhoneDigits(buyer.phone);
+      if (newDigits.isNotEmpty && !Buyer.cleanPhoneDigits(combinedPhone).contains(newDigits)) {
+        combinedPhone = combinedPhone.isEmpty ? buyer.phone : '$combinedPhone, ${buyer.phone}';
+      }
+      String combinedNotes = existing.notes;
+      if (buyer.notes.isNotEmpty && !combinedNotes.contains(buyer.notes)) {
+        combinedNotes = combinedNotes.isEmpty ? buyer.notes : '$combinedNotes | ${buyer.notes}';
+      }
+
+      targetBuyer = existing.copyWith(
+        email: combinedEmail,
+        phone: combinedPhone,
+        website: existing.website.isEmpty ? buyer.website : existing.website,
+        notes: combinedNotes,
+      );
+      _buyers[dupIndex] = targetBuyer;
       _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
       _rebuildCaches(preservePage: true);
     } else {
@@ -911,8 +983,9 @@ class BuyerProvider extends ChangeNotifier {
     await _saveLocalBuyers();
     notifyListeners();
 
-    // Send srNo to Apps Script so it can find the exact row in Column A.
+    // Send srNo to Apps Script so it can find the exact row in Column A, delete it, and renumber.
     bool res = await _apiService.deleteBuyerBySrNo(srNoToDelete);
+    _apiService.renumberBuyersOnSheet();
     return res;
   }
 

@@ -406,6 +406,52 @@ class ApiService {
     return true; // Optimistic: local state already updated
   }
 
+  /// Calls Apps Script to sequentially renumber all buyers in Sheet1 Column A from 1 to N.
+  Future<bool> renumberBuyersOnSheet({String? customScriptUrl}) async {
+    final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
+        ? customScriptUrl.trim()
+        : _scriptUrl;
+
+    final String getUrl = '$targetScriptUrl?action=renumberBuyers';
+    final String postBody = json.encode({'action': 'renumberBuyers'});
+
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('fetch', [
+          targetScriptUrl,
+          js.JsObject.jsify({
+            'method': 'POST',
+            'mode': 'no-cors',
+            'headers': {'Content-Type': 'text/plain;charset=utf-8'},
+            'body': postBody,
+          }),
+        ]);
+        js.context.callMethod('eval', ['''
+          (function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "$getUrl", true);
+            xhr.send();
+          })();
+        ''']);
+        return true;
+      } catch (e) {
+        debugPrint('ApiService: Web renumberBuyersOnSheet error: $e');
+      }
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(targetScriptUrl),
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: postBody,
+      ).timeout(const Duration(seconds: 8));
+      return response.statusCode == 200 || response.statusCode == 302;
+    } catch (e) {
+      debugPrint('ApiService: HTTP POST renumberBuyersOnSheet error: $e');
+    }
+    return true;
+  }
+
   Future<int> batchMarkSent(List<String> buyerIds, {bool sendEmail = false}) async {
     return buyerIds.length;
   }

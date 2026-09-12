@@ -344,11 +344,30 @@ class BuyerProvider extends ChangeNotifier {
         // Always trust remote data. Sort by Sr. No. so display order matches sheet.
         _buyers = remote;
         _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
+        // Ensure clean sequential numbering (1 to N) so Sr. No. and Total Count never mismatch
+        for (int i = 0; i < _buyers.length; i++) {
+          final seq = i + 1;
+          if (_buyers[i].srNo != seq) {
+            _buyers[i] = _buyers[i].copyWith(
+              srNo: seq,
+              id: Buyer.formatBuyerId(seq),
+            );
+          }
+        }
       } else {
         // No remote data — fall back to local cache.
         final local = await _loadLocalBuyers();
         _buyers = local;
         _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
+        for (int i = 0; i < _buyers.length; i++) {
+          final seq = i + 1;
+          if (_buyers[i].srNo != seq) {
+            _buyers[i] = _buyers[i].copyWith(
+              srNo: seq,
+              id: Buyer.formatBuyerId(seq),
+            );
+          }
+        }
       }
 
       await _saveLocalBuyers();
@@ -635,7 +654,7 @@ class BuyerProvider extends ChangeNotifier {
 
   // Metrics
   int get totalBuyersCount => _buyers.length;
-  int get maxSrNo => _buyers.isEmpty ? 0 : _buyers.map((b) => b.srNo).reduce((a, b) => a > b ? a : b);
+  int get maxSrNo => _buyers.length;
   int get dueTodayCount => _buyers.where((b) => b.isDueToday() && b.clientReply.toLowerCase() != 'yes').length;
   int get firstEmailCount => _buyers.where((b) => (b.followupCount == 0 && b.firstEmailDate.trim().isEmpty) || b.status == 'New' || b.status == 'First Email Pending').length;
   int get todayFollowupCount => _buyers.where((b) {
@@ -850,11 +869,8 @@ class BuyerProvider extends ChangeNotifier {
       _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
       _rebuildCaches(preservePage: true);
     } else {
-      // New buyer — assign next sequential srNo.
-      final maxSrNo = _buyers.isEmpty
-          ? 0
-          : _buyers.map((b) => b.srNo).reduce((a, b) => a > b ? a : b);
-      final nextSrNo = maxSrNo + 1;
+      // New buyer — assign next sequential srNo (total count + 1).
+      final nextSrNo = _buyers.length + 1;
       targetBuyer = buyer.copyWith(
         id: Buyer.formatBuyerId(nextSrNo),
         srNo: nextSrNo,
@@ -877,8 +893,20 @@ class BuyerProvider extends ChangeNotifier {
     if (match.isEmpty) return false;
     final srNoToDelete = match.first.srNo;
 
-    _buyers.removeWhere((b) => b.srNo == srNoToDelete);
+    _buyers.removeWhere((b) => b.id == id || b.srNo == srNoToDelete);
     _selectedBuyerIds.remove(id);
+
+    // Re-sequence remaining buyers so Sr. No. and Total Count stay 100% in sync
+    for (int i = 0; i < _buyers.length; i++) {
+      final seq = i + 1;
+      if (_buyers[i].srNo != seq) {
+        _buyers[i] = _buyers[i].copyWith(
+          srNo: seq,
+          id: Buyer.formatBuyerId(seq),
+        );
+      }
+    }
+
     _rebuildCaches(preservePage: true);
     await _saveLocalBuyers();
     notifyListeners();

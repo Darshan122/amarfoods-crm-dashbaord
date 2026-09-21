@@ -7,6 +7,7 @@ import 'dart:js' as js;
 import 'template_service.dart';
 import '../models/email_template.dart';
 import '../models/buyer.dart';
+import '../models/buyer_contact.dart';
 import '../providers/buyer_provider.dart';
 
 class UrlUtils {
@@ -578,11 +579,12 @@ class UrlUtils {
   }
 
   /// Interactive LinkedIn Outreach Dialog:
-  /// 1. Pre-fills the stage-appropriate message (Connect Note, First Intro, Follow-up 1, 2, 3)
-  /// 2. Displays live character count (< 300 chars limit for connection notes)
-  /// 3. 1-Click Copy to clipboard
-  /// 4. 1-Click Open LinkedIn Profile / Chat
-  /// 5. 1-Click Mark as Contacted & auto-schedule next reminder (+4 to +7 days)
+  /// 1. Supports multiple decision-makers per company (Procurement, Purchasing, Sourcing, R&D).
+  /// 2. Tailors the Connect Note & DM to the selected contact's specific role & name.
+  /// 3. Displays live character count (< 300 chars limit for connection notes) with green/red pill.
+  /// 4. 1-Click "Copy Note & Open Profile" (copies note to clipboard AND immediately launches LinkedIn profile).
+  /// 5. 1-Click "Discover Leads" (opens LinkedIn people search for company).
+  /// 6. 1-Click Mark as Contacted & auto-schedule next reminder (+4 to +7 days).
   static Future<void> handleLinkedInOutreachDialog({
     required BuildContext context,
     required Buyer buyer,
@@ -591,20 +593,60 @@ class UrlUtils {
     final templateService = TemplateService();
     if (!templateService.isInitialized) {
       await templateService.init();
+      if (!context.mounted) return;
     }
+
+    final contacts = buyer.contacts;
+    BuyerContact? selectedContact = contacts.isNotEmpty ? contacts.first : null;
 
     EmailTemplate currentTemplate = templateService.getLinkedInTemplateForFollowup(buyer.followupCount);
     final textCtrl = TextEditingController();
 
-    void updateText(EmailTemplate tpl) {
-      textCtrl.text = TemplateService.processPlaceholders(
+    String generateRoleTailoredNote(BuyerContact? contact, EmailTemplate tpl) {
+      if (tpl.type == 'linkedin_connect') {
+        final contactName = contact?.name.trim() ?? '';
+        final firstName = contactName.isNotEmpty ? contactName.split(' ').first : 'Team';
+        final role = contact?.role ?? 'Procurement';
+        final comp = buyer.company.isNotEmpty ? buyer.company : 'your team';
+
+        if (role == 'Procurement' || role == 'Sourcing') {
+          return 'Hi $firstName, noticed your procurement role at $comp. Amar Foods manufactures optical-sorted dehydrated onion flakes, garlic & spices from Mahuva, India. Would love to connect & share direct factory pricing!';
+        } else if (role == 'R&D / Formulator' || role == 'QA') {
+          return 'Hi $firstName, noticed your formulation role at $comp. Amar Foods produces export-grade dehydrated onion flakes, granules & powders (<6% moisture, strict micro specs) in India. Would love to connect & share lab samples!';
+        } else if (role == 'Purchasing' || role == 'Supply Chain') {
+          return 'Hi $firstName, noticed your supply chain role at $comp. Amar Foods exports direct FCL onion & garlic containers from Mundra port with reliable ocean schedules. Would love to connect!';
+        } else {
+          return 'Hi $firstName, noticed your work at $comp. Amar Foods manufactures & exports optical-sorted dehydrated onion, garlic & spices from India. Would love to connect and follow your updates!';
+        }
+      }
+
+      return TemplateService.processPlaceholders(
         tpl.body,
         company: buyer.company,
         followupCount: buyer.followupCount,
+        contactPerson: selectedContact?.name.isNotEmpty == true ? selectedContact!.name : null,
       );
     }
 
-    updateText(currentTemplate);
+    void updateText() {
+      textCtrl.text = generateRoleTailoredNote(selectedContact, currentTemplate);
+    }
+
+    updateText();
+
+    void openTargetProfile() {
+      if (selectedContact != null && selectedContact!.linkedInUrl.isNotEmpty) {
+        launchURL(selectedContact!.linkedInUrl);
+      } else if (buyer.website.toLowerCase().contains('linkedin.com')) {
+        launchURL(buyer.website);
+      } else {
+        final term = selectedContact != null && selectedContact!.name.isNotEmpty
+            ? '${buyer.company} ${selectedContact!.name}'
+            : '${buyer.company} procurement';
+        final searchUrl = 'https://www.linkedin.com/search/results/people/?keywords=${Uri.encodeComponent(term)}';
+        launchURL(searchUrl);
+      }
+    }
 
     await showDialog<void>(
       context: context,
@@ -664,11 +706,23 @@ class UrlUtils {
                                   ],
                                 ),
                                 const Text(
-                                  'Smart LinkedIn outreach — copy message, open chat, and log reminder.',
+                                  'Multi-contact outreach — select decision maker, copy note, and open profile.',
                                   style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                                 ),
                               ],
                             ),
+                          ),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF0A66C2),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            ),
+                            onPressed: () {
+                              final searchUrl = 'https://www.linkedin.com/search/results/people/?keywords=${Uri.encodeComponent('${buyer.company} procurement')}';
+                              launchURL(searchUrl);
+                            },
+                            icon: const Icon(Icons.person_search_rounded, size: 16),
+                            label: const Text('Find Leads', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
@@ -676,7 +730,95 @@ class UrlUtils {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 14),
+
+                      // Decision-Maker / Contact Selector (if multiple contacts exist)
+                      if (contacts.isNotEmpty) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF86EFAC)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.badge_outlined, size: 16, color: Color(0xFF166534)),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Target Decision-Maker:',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF166534)),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    '${contacts.length} person${contacts.length > 1 ? 's' : ''} at ${buyer.company}',
+                                    style: const TextStyle(fontSize: 11, color: Color(0xFF15803D)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: contacts.map((c) {
+                                  final isSelected = selectedContact == c;
+                                  return ChoiceChip(
+                                    label: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(c.name.isNotEmpty ? c.name : 'Contact'),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: isSelected ? Colors.white.withValues(alpha: 0.25) : const Color(0xFFE0F2FE),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            c.role,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: isSelected ? Colors.white : const Color(0xFF0369A1),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    selected: isSelected,
+                                    selectedColor: const Color(0xFF009647),
+                                    labelStyle: TextStyle(
+                                      color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                      fontSize: 12,
+                                    ),
+                                    backgroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      side: BorderSide(
+                                        color: isSelected ? const Color(0xFF009647) : const Color(0xFFCBD5E1),
+                                      ),
+                                    ),
+                                    onSelected: (val) {
+                                      if (val) {
+                                        setDialogState(() {
+                                          selectedContact = c;
+                                          updateText();
+                                        });
+                                      }
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
 
                       // Stage Selector Dropdown
                       Container(
@@ -707,7 +849,7 @@ class UrlUtils {
                                     if (newType != null) {
                                       setDialogState(() {
                                         currentTemplate = templateService.getTemplateForType(newType, buyer.followupCount);
-                                        updateText(currentTemplate);
+                                        updateText();
                                       });
                                     }
                                   },
@@ -717,14 +859,16 @@ class UrlUtils {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
 
                       // Character count banner (especially crucial for 300 char connection note limit)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            isConnectNote ? 'CONNECTION NOTE (< 300 CHARS):' : 'LINKEDIN MESSAGE:',
+                            isConnectNote
+                                ? 'ROLE-TAILORED CONNECTION NOTE (< 300 CHARS):'
+                                : 'LINKEDIN MESSAGE:',
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
                           ),
                           Container(
@@ -758,15 +902,15 @@ class UrlUtils {
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 18),
 
-                      // Action buttons: Copy, Open Profile, Mark Sent
+                      // Action buttons: Copy & Open, Copy Only, Mark Sent
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
                         alignment: WrapAlignment.end,
                         children: [
-                          // 1. Copy Message Button
+                          // 1. Copy Only Button
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF0F172A),
@@ -792,20 +936,49 @@ class UrlUtils {
                               );
                             },
                             icon: const Icon(Icons.copy_rounded, size: 16),
-                            label: const Text('Copy Message', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                            label: const Text('Copy Text', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                           ),
 
-                          // 2. Open LinkedIn Profile / Search
+                          // 2. Primary Action: Copy Note & Open Profile
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF0A66C2),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              elevation: 2,
                             ),
-                            onPressed: () => launchLinkedInProfile(buyer),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: textCtrl.text));
+                              openTargetProfile();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: const [
+                                      Icon(Icons.check_circle_rounded, color: Color(0xFF4ADE80), size: 18),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Copied note! Switched to LinkedIn. Press Ctrl+V in connect note & send.',
+                                          style: TextStyle(fontWeight: FontWeight.w500),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  backgroundColor: const Color(0xFF0F172A),
+                                  duration: const Duration(seconds: 4),
+                                  behavior: SnackBarBehavior.floating,
+                                  width: 480,
+                                ),
+                              );
+                            },
                             icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                            label: const Text('Open LinkedIn', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                            label: Text(
+                              selectedContact != null && selectedContact!.name.isNotEmpty
+                                  ? 'Copy & Open ${selectedContact!.name.split(' ').first}\'s Profile'
+                                  : 'Copy & Open Profile',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                            ),
                           ),
 
                           // 3. Mark Follow-Up Sent & Auto-Schedule Next Reminder
@@ -813,7 +986,7 @@ class UrlUtils {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF009647),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
                             onPressed: () async {

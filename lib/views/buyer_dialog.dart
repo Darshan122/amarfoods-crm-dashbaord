@@ -1,6 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/buyer.dart';
+import '../models/buyer_contact.dart';
+
+class _ContactEntry {
+  final TextEditingController nameCtrl;
+  String role;
+  final TextEditingController linkedInCtrl;
+  final TextEditingController emailCtrl;
+
+  _ContactEntry({
+    required this.nameCtrl,
+    this.role = 'Procurement',
+    required this.linkedInCtrl,
+    required this.emailCtrl,
+  });
+
+  void dispose() {
+    nameCtrl.dispose();
+    linkedInCtrl.dispose();
+    emailCtrl.dispose();
+  }
+}
 
 class BuyerDialog extends StatefulWidget {
   final Buyer? buyer;
@@ -31,6 +52,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
   final List<TextEditingController> _phoneCtrls = [];
   late TextEditingController _followUpDateCtrl;
   late TextEditingController _notesCtrl;
+  final List<_ContactEntry> _contactEntries = [];
 
   String _connectionType = 'Email';
   String _status = 'New';
@@ -97,7 +119,19 @@ class _BuyerDialogState extends State<BuyerDialog> {
       dateVal = todayStr;
     }
     _followUpDateCtrl = TextEditingController(text: dateVal);
-    _notesCtrl = TextEditingController(text: b?.notes ?? '');
+    _notesCtrl = TextEditingController(text: b?.notesWithoutContacts ?? '');
+
+    final initialContacts = b?.contacts ?? [];
+    for (var c in initialContacts) {
+      if (c.name.isNotEmpty && c.name != b?.company) {
+        _contactEntries.add(_ContactEntry(
+          nameCtrl: TextEditingController(text: c.name),
+          role: c.role,
+          linkedInCtrl: TextEditingController(text: c.linkedInUrl),
+          emailCtrl: TextEditingController(text: c.email),
+        ));
+      }
+    }
 
     final initialMarket = b?.marketType ?? widget.defaultMarket ?? 'International';
     _marketType = initialMarket.toLowerCase().contains('dom') ? 'Domestic' : 'International';
@@ -105,6 +139,25 @@ class _BuyerDialogState extends State<BuyerDialog> {
     _connectionType = b?.connectionMethod.isNotEmpty == true ? b!.connectionMethod : 'Email';
     _status = b?.status.isNotEmpty == true ? b!.status : 'New';
     _clientReply = b?.clientReply.isNotEmpty == true ? b!.clientReply : 'Pending';
+  }
+
+  void _addContactEntry([BuyerContact? contact]) {
+    setState(() {
+      _contactEntries.add(_ContactEntry(
+        nameCtrl: TextEditingController(text: contact?.name ?? ''),
+        role: contact?.role ?? 'Procurement',
+        linkedInCtrl: TextEditingController(text: contact?.linkedInUrl ?? ''),
+        emailCtrl: TextEditingController(text: contact?.email ?? ''),
+      ));
+    });
+  }
+
+  void _removeContactEntry(int index) {
+    if (index >= _contactEntries.length) return;
+    setState(() {
+      _contactEntries[index].dispose();
+      _contactEntries.removeAt(index);
+    });
   }
 
   void _addEmailField([String text = '']) {
@@ -147,6 +200,9 @@ class _BuyerDialogState extends State<BuyerDialog> {
     }
     _followUpDateCtrl.dispose();
     _notesCtrl.dispose();
+    for (var ce in _contactEntries) {
+      ce.dispose();
+    }
     super.dispose();
   }
 
@@ -517,6 +573,8 @@ class _BuyerDialogState extends State<BuyerDialog> {
                           ),
                         ),
                       ),
+                      // KEY DECISION-MAKERS & LINKEDIN CONTACTS
+                      _buildDecisionMakersSection(isMobile),
                       const SizedBox(height: 18),
 
                       // ROW 6: Buyer Notes & Specifications
@@ -600,6 +658,18 @@ class _BuyerDialogState extends State<BuyerDialog> {
         .where((e) => e.isNotEmpty && !e.toLowerCase().contains('#error'))
         .join(', ');
 
+    final contactsList = _contactEntries
+        .map((e) => BuyerContact(
+              name: e.nameCtrl.text.trim(),
+              role: e.role,
+              linkedInUrl: e.linkedInCtrl.text.trim(),
+              email: e.emailCtrl.text.trim(),
+            ))
+        .where((c) => c.name.isNotEmpty || c.linkedInUrl.isNotEmpty)
+        .toList();
+
+    final notesWithContacts = Buyer.embedContactsInNotes(_notesCtrl.text.trim(), contactsList);
+
     final srNoVal = widget.buyer?.srNo ?? widget.nextSrNo;
     final newBuyer = Buyer(
       id: widget.buyer?.id ?? Buyer.formatBuyerId(srNoVal),
@@ -617,7 +687,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
       followupCount: widget.buyer?.followupCount ?? 0,
       status: _status,
       nextAction: widget.buyer?.nextAction ?? 'Follow-Up',
-      notes: _notesCtrl.text.trim(),
+      notes: notesWithContacts,
       marketType: _marketType,
     );
 
@@ -820,6 +890,267 @@ class _BuyerDialogState extends State<BuyerDialog> {
         const SizedBox(width: 20),
         Expanded(child: child2),
       ],
+    );
+  }
+
+  Widget _buildDecisionMakersSection(bool isMobile) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A66C2).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(Icons.people_alt_rounded, color: Color(0xFF0A66C2), size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          'Key Decision-Makers & LinkedIn Profiles',
+                          style: TextStyle(
+                            color: Color(0xFF0F172A),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        if (_contactEntries.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0A66C2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${_contactEntries.length}',
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Store multiple people (Procurement, Purchasing, Sourcing, R&D) under this single company.',
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF0A66C2),
+                  side: const BorderSide(color: Color(0xFF0A66C2)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () => _addContactEntry(),
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: const Text('+ Add Person', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          if (_contactEntries.isEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 16, color: Colors.blueGrey.shade400),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'No specific contacts added yet. Click "+ Add Person" to add individual Procurement, Purchasing, or R&D leads with their direct LinkedIn URLs.',
+                      style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+            ...List.generate(_contactEntries.length, (index) {
+              final entry = _contactEntries[index];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: isMobile
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 11,
+                                backgroundColor: const Color(0xFFE2E8F0),
+                                child: Text(
+                                  '${index + 1}',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: entry.nameCtrl,
+                                  style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
+                                  decoration: _inputDecoration('Contact Full Name').copyWith(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                onPressed: () => _removeContactEntry(index),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            initialValue: BuyerContact.standardRoles.contains(entry.role) ? entry.role : BuyerContact.standardRoles.first,
+                            dropdownColor: Colors.white,
+                            style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+                            decoration: _inputDecoration('Role').copyWith(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            ),
+                            items: BuyerContact.standardRoles.map((r) {
+                              return DropdownMenuItem(value: r, child: Text(r));
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) setState(() => entry.role = val);
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: entry.linkedInCtrl,
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF0F172A)),
+                            decoration: _inputDecoration('LinkedIn Profile URL').copyWith(
+                              prefixIcon: const Icon(Icons.link_rounded, size: 16, color: Color(0xFF0A66C2)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: entry.emailCtrl,
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF0F172A)),
+                            decoration: _inputDecoration('Direct Email (optional)').copyWith(
+                              prefixIcon: const Icon(Icons.alternate_email_rounded, size: 16, color: Color(0xFF64748B)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 11,
+                                backgroundColor: const Color(0xFFE2E8F0),
+                                child: Text(
+                                  '${index + 1}',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                flex: 3,
+                                child: TextFormField(
+                                  controller: entry.nameCtrl,
+                                  style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
+                                  decoration: _inputDecoration('Contact Full Name (e.g. David Clark)').copyWith(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 2,
+                                child: DropdownButtonFormField<String>(
+                                  initialValue: BuyerContact.standardRoles.contains(entry.role) ? entry.role : BuyerContact.standardRoles.first,
+                                  dropdownColor: Colors.white,
+                                  style: const TextStyle(color: Color(0xFF0F172A), fontSize: 12),
+                                  decoration: _inputDecoration('').copyWith(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  ),
+                                  items: BuyerContact.standardRoles.map((r) {
+                                    return DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 12)));
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) setState(() => entry.role = val);
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                tooltip: 'Remove contact',
+                                onPressed: () => _removeContactEntry(index),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const SizedBox(width: 30),
+                              Expanded(
+                                flex: 3,
+                                child: TextFormField(
+                                  controller: entry.linkedInCtrl,
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF0F172A)),
+                                  decoration: _inputDecoration('LinkedIn Profile URL (https://linkedin.com/in/...)').copyWith(
+                                    prefixIcon: const Icon(Icons.link_rounded, size: 16, color: Color(0xFF0A66C2)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 2,
+                                child: TextFormField(
+                                  controller: entry.emailCtrl,
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF0F172A)),
+                                  decoration: _inputDecoration('Direct Email (optional)').copyWith(
+                                    prefixIcon: const Icon(Icons.alternate_email_rounded, size: 16, color: Color(0xFF64748B)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+              );
+            }),
+          ],
+        ],
+      ),
     );
   }
 }

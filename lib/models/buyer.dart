@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'buyer_contact.dart';
 
 class Buyer {
   final String id; // Permanent ID e.g. AF-00001
@@ -290,6 +291,56 @@ class Buyer {
       next = next.add(const Duration(days: 1)); // Sunday -> Monday
     }
     return DateFormat('yyyy-MM-dd').format(next);
+  }
+
+  /// Parses multiple decision-makers from notes
+  List<BuyerContact> get contacts {
+    final list = <BuyerContact>[];
+    final match = RegExp(r'\[CONTACTS:\s*(.*?)\]', dotAll: true).firstMatch(notes);
+    if (match != null) {
+      final raw = match.group(1)?.trim() ?? '';
+      if (raw.isNotEmpty) {
+        final entries = raw.split(';');
+        for (var entry in entries) {
+          final trimmed = entry.trim();
+          if (trimmed.isNotEmpty) {
+            list.add(BuyerContact.parseCompact(trimmed));
+          }
+        }
+      }
+    }
+
+    // Fallback: If no explicit contacts, but website or connection is LinkedIn
+    if (list.isEmpty) {
+      final isLinkedIn = connectionMethod.toLowerCase().contains('linkedin') ||
+          website.toLowerCase().contains('linkedin.com');
+      if (isLinkedIn) {
+        list.add(BuyerContact(
+          name: company,
+          role: 'Procurement',
+          linkedInUrl: website.contains('linkedin') ? website : '',
+          status: followupCount > 0 ? 'Connect Sent' : 'Not Contacted',
+        ));
+      }
+    }
+    return list;
+  }
+
+  /// Embeds multiple contacts cleanly into notes string (100% backward compatible with Sheet1 Column O)
+  static String embedContactsInNotes(String baseNotes, List<BuyerContact> contactsList) {
+    String cleanNotes = baseNotes.replaceAll(RegExp(r'\[CONTACTS:\s*.*?\]', dotAll: true), '').trim();
+    if (contactsList.isEmpty) return cleanNotes;
+
+    final serialized = contactsList.map((c) => c.toCompactString()).join('; ');
+    if (cleanNotes.isEmpty) {
+      return '[CONTACTS: $serialized]';
+    }
+    return '$cleanNotes\n[CONTACTS: $serialized]';
+  }
+
+  /// Strips [CONTACTS: ...] block from notes for clean display
+  String get notesWithoutContacts {
+    return notes.replaceAll(RegExp(r'\[CONTACTS:\s*.*?\]', dotAll: true), '').trim();
   }
 
   // ---------------------------------------------------------------------------

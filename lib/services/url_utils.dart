@@ -603,20 +603,44 @@ class UrlUtils {
     final textCtrl = TextEditingController();
 
     String generateRoleTailoredNote(BuyerContact? contact, EmailTemplate tpl) {
-      if (tpl.type == 'linkedin_connect') {
-        final contactName = contact?.name.trim() ?? '';
-        final firstName = contactName.isNotEmpty ? contactName.split(' ').first : 'Team';
-        final role = contact?.role ?? 'Procurement';
-        final comp = buyer.company.isNotEmpty ? buyer.company : 'your team';
+      final contactName = contact?.name.trim() ?? '';
+      final firstName = contactName.isNotEmpty ? contactName.split(' ').first : 'Team';
+      final role = contact?.role ?? 'Procurement';
+      final comp = buyer.company.isNotEmpty ? buyer.company : 'your team';
 
-        if (role == 'Procurement' || role == 'Sourcing') {
+      if (tpl.type == 'linkedin_connect') {
+        if (role.contains('Founder') || role.contains('CEO') || role.contains('Owner')) {
+          return 'Hi $firstName, admire your work at $comp. Amar Foods is a direct manufacturer & exporter of optical-sorted dehydrated onion, garlic & spices from Mahuva, India. We partner with food brands to cut raw material costs. Would love to connect and follow $comp\'s growth!';
+        } else if (role.contains('Director') || role.contains('VP') || role.contains('Executive')) {
+          return 'Hi $firstName, noticed your leadership at $comp. We are a direct manufacturer of dehydrated onion & garlic in Gujarat, India (FSSC 22000, US-FDA). We supply FCL ocean containers with favorable FOB/CIF terms. Would love to connect and explore factory-direct supply.';
+        } else if (role.contains('Procurement') || role.contains('Sourcing')) {
           return 'Hi $firstName, noticed your procurement role at $comp. Amar Foods manufactures optical-sorted dehydrated onion flakes, garlic & spices from Mahuva, India. Would love to connect & share direct factory pricing!';
-        } else if (role == 'R&D / Formulator' || role == 'QA') {
+        } else if (role.contains('R&D') || role.contains('Formulator')) {
           return 'Hi $firstName, noticed your formulation role at $comp. Amar Foods produces export-grade dehydrated onion flakes, granules & powders (<6% moisture, strict micro specs) in India. Would love to connect & share lab samples!';
-        } else if (role == 'Purchasing' || role == 'Supply Chain') {
-          return 'Hi $firstName, noticed your supply chain role at $comp. Amar Foods exports direct FCL onion & garlic containers from Mundra port with reliable ocean schedules. Would love to connect!';
+        } else if (role.contains('Quality') || role.contains('QA')) {
+          return 'Hi $firstName, noticed your quality assurance role at $comp. Amar Foods operates US-FDA registered, FSSC 22000, Kosher & Halal certified dehydrated onion & garlic facilities in India. Would love to connect & share spec sheets!';
+        } else if (role.contains('Purchasing') || role.contains('Supply Chain')) {
+          return 'Hi $firstName, noticed your supply chain role at $comp. Amar Foods exports direct FCL onion & garlic containers from Mundra port with reliable ocean schedules. Would love to connect and quote on your upcoming requirements!';
         } else {
           return 'Hi $firstName, noticed your work at $comp. Amar Foods manufactures & exports optical-sorted dehydrated onion, garlic & spices from India. Would love to connect and follow your updates!';
+        }
+      }
+
+      if (tpl.type == 'linkedin_welcome') {
+        if (role.contains('Founder') || role.contains('CEO') || role.contains('Owner') || role.contains('Director') || role.contains('VP') || role.contains('Executive')) {
+          return '''Hi $firstName, thanks for connecting!
+
+Briefly introducing Amar Foods: we are a direct manufacturer & exporter of premium Dehydrated Onion, Garlic, Spices & Vegetable Powders based in Mahuva, Gujarat, India (US-FDA registered, FSSC 22000, Kosher, Halal).
+
+We partner directly with food processors to eliminate export trading intermediaries and ensure reliable container supply.
+
+Could you please connect us with your raw material procurement manager, or let us know if $comp has an upcoming tender/requirement we can quote on?''';
+        } else if (role.contains('R&D') || role.contains('Formulator') || role.contains('Quality') || role.contains('QA')) {
+          return '''Hi $firstName, thanks for connecting!
+
+Briefly introducing Amar Foods: we manufacture premium Dehydrated White, Red & Pink Onion (Flakes, Minced, Chopped, Granules, Powder) and Garlic in Gujarat, India with optical sortex cleaning and strict micro specifications (<6% moisture).
+
+We would be happy to air-courier a complimentary lab testing sample kit along with our COA and technical specifications for your evaluation at $comp. Could you please share the preferred mesh sizes or delivery address?''';
         }
       }
 

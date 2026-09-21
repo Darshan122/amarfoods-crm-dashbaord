@@ -210,6 +210,8 @@ class BuyerContact {
     'Procurement',
     'Purchasing',
     'Sourcing',
+    'Founder / CEO / Owner',
+    'Managing Director / VP',
     'R&D / Formulator',
     'Quality Assurance (QA)',
     'Supply Chain',

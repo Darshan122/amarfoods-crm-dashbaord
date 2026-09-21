@@ -4,17 +4,19 @@ import '../models/buyer.dart';
 import '../models/buyer_contact.dart';
 
 class _ContactEntry {
+  final String id;
   final TextEditingController nameCtrl;
   String role;
   final TextEditingController linkedInCtrl;
   final TextEditingController emailCtrl;
 
   _ContactEntry({
+    String? id,
     required this.nameCtrl,
     this.role = 'Procurement',
     required this.linkedInCtrl,
     required this.emailCtrl,
-  });
+  }) : id = id ?? UniqueKey().toString();
 
   void dispose() {
     nameCtrl.dispose();
@@ -122,14 +124,20 @@ class _BuyerDialogState extends State<BuyerDialog> {
     _notesCtrl = TextEditingController(text: b?.notesWithoutContacts ?? '');
 
     final initialContacts = b?.contacts ?? [];
-    for (var c in initialContacts) {
-      if (c.name.isNotEmpty && c.name != b?.company) {
-        _contactEntries.add(_ContactEntry(
-          nameCtrl: TextEditingController(text: c.name),
-          role: c.role,
-          linkedInCtrl: TextEditingController(text: c.linkedInUrl),
-          emailCtrl: TextEditingController(text: c.email),
-        ));
+    final isFallbackSingle = initialContacts.length == 1 &&
+        initialContacts.first.name == b?.company &&
+        initialContacts.first.linkedInUrl == b?.website;
+
+    if (!isFallbackSingle) {
+      for (var c in initialContacts) {
+        if (c.name.isNotEmpty || c.linkedInUrl.isNotEmpty) {
+          _contactEntries.add(_ContactEntry(
+            nameCtrl: TextEditingController(text: c.name),
+            role: c.role,
+            linkedInCtrl: TextEditingController(text: c.linkedInUrl),
+            emailCtrl: TextEditingController(text: c.email),
+          ));
+        }
       }
     }
 
@@ -994,6 +1002,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
             ...List.generate(_contactEntries.length, (index) {
               final entry = _contactEntries[index];
               return Container(
+                key: ValueKey(entry.id),
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -1033,6 +1042,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
                           ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
+                            key: ValueKey('role_mobile_${entry.id}_${entry.role}'),
                             initialValue: BuyerContact.standardRoles.contains(entry.role) ? entry.role : BuyerContact.standardRoles.first,
                             dropdownColor: Colors.white,
                             style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
@@ -1093,6 +1103,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
                               Expanded(
                                 flex: 2,
                                 child: DropdownButtonFormField<String>(
+                                  key: ValueKey('role_desktop_${entry.id}_${entry.role}'),
                                   initialValue: BuyerContact.standardRoles.contains(entry.role) ? entry.role : BuyerContact.standardRoles.first,
                                   dropdownColor: Colors.white,
                                   style: const TextStyle(color: Color(0xFF0F172A), fontSize: 12),

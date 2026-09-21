@@ -293,24 +293,71 @@ class Buyer {
     return DateFormat('yyyy-MM-dd').format(next);
   }
 
-  /// Parses multiple decision-makers from notes
+  static const String contactsStartMarker = '<<<CONTACTS_START>>>';
+  static const String contactsEndMarker = '<<<CONTACTS_END>>>';
+
+  /// Parses multiple decision-makers from notes with auto-repair support
   List<BuyerContact> get contacts {
     final list = <BuyerContact>[];
-    final match = RegExp(r'\[CONTACTS:\s*(.*?)\]', dotAll: true).firstMatch(notes);
-    if (match != null) {
-      final raw = match.group(1)?.trim() ?? '';
-      if (raw.isNotEmpty) {
-        final entries = raw.split(';');
-        for (var entry in entries) {
-          final trimmed = entry.trim();
-          if (trimmed.isNotEmpty) {
-            list.add(BuyerContact.parseCompact(trimmed));
+
+    // 1. Primary format: <<<CONTACTS_START>>> ... <<<CONTACTS_END>>>
+    final blockMatch = RegExp(r'<<<CONTACTS_START>>>(.*?)<<<CONTACTS_END>>>', dotAll: true).firstMatch(notes);
+    if (blockMatch != null) {
+      final content = blockMatch.group(1)?.trim() ?? '';
+      final lines = content.split('\n');
+      for (var line in lines) {
+        final trimmed = line.trim();
+        if (trimmed.isNotEmpty) {
+          final c = BuyerContact.fromStorageLine(trimmed);
+          if (c.name.isNotEmpty || c.linkedInUrl.isNotEmpty) {
+            list.add(c);
+          }
+        }
+      }
+      if (list.isNotEmpty) return list;
+    }
+
+    // 2. Backward compatibility & Auto-Repair for legacy [CONTACTS: ...] format
+    if (notes.contains('[CONTACTS:')) {
+      final startIdx = notes.indexOf('[CONTACTS:');
+      String contactSection = notes.substring(startIdx + '[CONTACTS:'.length);
+      int endIdx = contactSection.lastIndexOf(']');
+      if (endIdx != -1) {
+        contactSection = contactSection.substring(0, endIdx);
+      }
+      final rawEntries = contactSection.split(RegExp(r'[;\n]'));
+      for (var entry in rawEntries) {
+        final trimmed = entry.trim();
+        if (trimmed.isNotEmpty) {
+          final c = BuyerContact.parseCompact(trimmed);
+          if (c.name.isNotEmpty || c.linkedInUrl.isNotEmpty) {
+            list.add(c);
           }
         }
       }
     }
 
-    // Fallback: If no explicit contacts, but website or connection is LinkedIn
+    // 3. Auto-Repair: Extract any loose contacts or severed lines containing linkedin.com
+    if (list.length <= 1 && notes.contains('linkedin.com')) {
+      final parts = notes.split(RegExp(r'[;\n]'));
+      for (var p in parts) {
+        final trimmed = p.trim();
+        if (trimmed.contains('linkedin.com') && !trimmed.startsWith('<<<') && !trimmed.contains('[CONTACTS:')) {
+          final c = BuyerContact.parseCompact(trimmed);
+          if (c.name.isNotEmpty || c.linkedInUrl.isNotEmpty) {
+            // Avoid duplicate if already in list
+            final alreadyExists = list.any((existing) =>
+                (c.linkedInUrl.isNotEmpty && existing.linkedInUrl.isNotEmpty && existing.linkedInUrl == c.linkedInUrl) ||
+                (c.name.isNotEmpty && existing.name.isNotEmpty && existing.name.toLowerCase() == c.name.toLowerCase()));
+            if (!alreadyExists) {
+              list.add(c);
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Default fallback: If no explicit contacts, but website or connection is LinkedIn
     if (list.isEmpty) {
       final isLinkedIn = connectionMethod.toLowerCase().contains('linkedin') ||
           website.toLowerCase().contains('linkedin.com');
@@ -328,19 +375,46 @@ class Buyer {
 
   /// Embeds multiple contacts cleanly into notes string (100% backward compatible with Sheet1 Column O)
   static String embedContactsInNotes(String baseNotes, List<BuyerContact> contactsList) {
-    String cleanNotes = baseNotes.replaceAll(RegExp(r'\[CONTACTS:\s*.*?\]', dotAll: true), '').trim();
+    String cleanNotes = _stripAllContactsFromNotes(baseNotes);
     if (contactsList.isEmpty) return cleanNotes;
 
-    final serialized = contactsList.map((c) => c.toCompactString()).join('; ');
-    if (cleanNotes.isEmpty) {
-      return '[CONTACTS: $serialized]';
+    final buffer = StringBuffer();
+    if (cleanNotes.isNotEmpty) {
+      buffer.writeln(cleanNotes);
     }
-    return '$cleanNotes\n[CONTACTS: $serialized]';
+    buffer.writeln(contactsStartMarker);
+    for (var c in contactsList) {
+      buffer.writeln(c.toStorageLine());
+    }
+    buffer.write(contactsEndMarker);
+    return buffer.toString().trim();
   }
 
-  /// Strips [CONTACTS: ...] block from notes for clean display
+  /// Strips all contact blocks and legacy tags from notes
+  static String _stripAllContactsFromNotes(String text) {
+    var result = text;
+    // Strip <<<CONTACTS_START>>> ... <<<CONTACTS_END>>>
+    result = result.replaceAll(RegExp(r'<<<CONTACTS_START>>>[\s\S]*?<<<CONTACTS_END>>>'), '');
+
+    // Strip legacy [CONTACTS: ... ]
+    if (result.contains('[CONTACTS:')) {
+      final startIdx = result.indexOf('[CONTACTS:');
+      final endIdx = result.lastIndexOf(']');
+      if (endIdx > startIdx) {
+        result = result.substring(0, startIdx) + result.substring(endIdx + 1);
+      } else {
+        result = result.replaceAll(RegExp(r'\[CONTACTS:[\s\S]*'), '');
+      }
+    }
+
+    // Clean any severed leaked contact lines (e.g. "(https://...); Name (https://...)]")
+    result = result.replaceAll(RegExp(r'\(https?://[^\s\)]+\)[\s\S]*?\]'), '');
+    return result.trim();
+  }
+
+  /// Strips contacts block from notes for clean UI display
   String get notesWithoutContacts {
-    return notes.replaceAll(RegExp(r'\[CONTACTS:\s*.*?\]', dotAll: true), '').trim();
+    return _stripAllContactsFromNotes(notes);
   }
 
   // ---------------------------------------------------------------------------

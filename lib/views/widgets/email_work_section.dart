@@ -27,6 +27,15 @@ class EmailWorkSection extends StatefulWidget {
 
 class _EmailWorkSectionState extends State<EmailWorkSection> {
   String _activeSubTab = 'all'; // 'all' | 'overdue' | 'followups' | 'first_emails'
+  String _channelFilter = 'all'; // 'all' | 'email' | 'linkedin'
+
+  bool _matchesChannel(Buyer b) {
+    if (_channelFilter == 'all') return true;
+    final bool isLinkedIn = b.connectionMethod.toLowerCase().contains('linkedin') ||
+        b.website.toLowerCase().contains('linkedin.com');
+    if (_channelFilter == 'linkedin') return isLinkedIn;
+    return !isLinkedIn;
+  }
 
   /// Page-level scroll (outer CustomScrollView)
   late final ScrollController _pageScrollCtrl;
@@ -93,14 +102,18 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
     final p = widget.provider;
 
     // Full lists from provider (Google Sheet live data via BuyerProvider)
-    final overdueBuyers = p.overdueBuyers;
-    final followupBuyers = p.followupTodayBuyers;
-    final firstEmailBuyers = p.firstEmailBuyers;
+    final allOverdue = p.overdueBuyers;
+    final allFollowup = p.followupTodayBuyers;
+    final allFirstEmail = p.firstEmailBuyers;
+
+    final overdueBuyers = allOverdue.where(_matchesChannel).toList();
+    final followupBuyers = allFollowup.where(_matchesChannel).toList();
+    final firstEmailBuyers = allFirstEmail.where(_matchesChannel).toList();
 
     // Paginated views for the inline scroll lists
-    final paginatedOverdue = p.paginatedOverdueBuyers;
-    final paginatedFollowup = p.paginatedFollowupTodayBuyers;
-    final paginatedFirstEmail = p.paginatedFirstEmailBuyers;
+    final paginatedOverdue = p.paginatedOverdueBuyers.where(_matchesChannel).toList();
+    final paginatedFollowup = p.paginatedFollowupTodayBuyers.where(_matchesChannel).toList();
+    final paginatedFirstEmail = p.paginatedFirstEmailBuyers.where(_matchesChannel).toList();
 
     final totalTodayWork =
         overdueBuyers.length + followupBuyers.length + firstEmailBuyers.length;
@@ -462,30 +475,83 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          _buildFilterTab("All Today's Work ($total)", 'all',
-              Colors.grey.shade900),
-          const SizedBox(width: 8),
-          _buildFilterTab('OVERDUE $overdue', 'overdue',
-              const Color(0xFFE11D48)),
-          const SizedBox(width: 8),
-          _buildFilterTab('FOLLOW-UPS TODAY $followups', 'followups',
-              const Color(0xFFD97706)),
-          const SizedBox(width: 8),
-          _buildFilterTab('FIRST EMAILS TODAY $firstEmails', 'first_emails',
-              const Color(0xFF8B2C69)),
-          const Spacer(),
-          const Icon(Icons.bolt, color: Colors.amber, size: 14),
-          const SizedBox(width: 4),
-          const Text(
-            'Action buttons automatically log email date & sync to Google Sheet',
-            style: TextStyle(
-                color: Color(0xFF64748B),
-                fontSize: 11,
-                fontStyle: FontStyle.italic),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _buildFilterTab("All Today's Work ($total)", 'all',
+                Colors.grey.shade900),
+            const SizedBox(width: 8),
+            _buildFilterTab('OVERDUE $overdue', 'overdue',
+                const Color(0xFFE11D48)),
+            const SizedBox(width: 8),
+            _buildFilterTab('FOLLOW-UPS TODAY $followups', 'followups',
+                const Color(0xFFD97706)),
+            const SizedBox(width: 8),
+            _buildFilterTab('FIRST EMAILS TODAY $firstEmails', 'first_emails',
+                const Color(0xFF8B2C69)),
+            const SizedBox(width: 16),
+            Container(
+              height: 24,
+              width: 1,
+              color: const Color(0xFFE2E8F0),
+            ),
+            const SizedBox(width: 16),
+            // Channel Filter Toggle
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildChannelFilterItem('all', 'All Leads'),
+                  _buildChannelFilterItem('email', '✉️ Email Queue'),
+                  _buildChannelFilterItem('linkedin', '💼 LinkedIn Leads'),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Icon(Icons.bolt, color: Colors.amber, size: 14),
+            const SizedBox(width: 4),
+            const Text(
+              'Actions auto-log dates & sync to Google Sheet',
+              style: TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChannelFilterItem(String key, String label) {
+    final isSel = _channelFilter == key;
+    return InkWell(
+      onTap: () => setState(() => _channelFilter = key),
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSel ? const Color(0xFF0A66C2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: isSel
+              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 3)]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSel ? Colors.white : const Color(0xFF475569),
+            fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
+            fontSize: 11,
           ),
-        ],
+        ),
       ),
     );
   }
@@ -785,13 +851,17 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
         .where((e) => e.isNotEmpty)
         .toList();
 
+    final bool isLinkedInBuyer = buyer.connectionMethod.toLowerCase().contains('linkedin') ||
+        buyer.website.toLowerCase().contains('linkedin.com');
+
     final bool isBuyerFollowup = buyer.firstEmailDate.trim().isNotEmpty || buyer.followupCount > 0;
-    final String badgeText = isBuyerFollowup
-        ? 'FOLLOW-UP #${buyer.nextFollowupStep}'
-        : 'FIRST EMAIL';
-    final IconData badgeIcon = isBuyerFollowup
-        ? Icons.access_time_rounded
-        : Icons.email_outlined;
+    final String badgeText = isLinkedInBuyer
+        ? (isBuyerFollowup ? 'LINKEDIN DM #${buyer.nextFollowupStep}' : 'CONNECT NOTE')
+        : (isBuyerFollowup ? 'FOLLOW-UP #${buyer.nextFollowupStep}' : 'FIRST EMAIL');
+    final IconData badgeIcon = isLinkedInBuyer
+        ? Icons.business_center_rounded
+        : (isBuyerFollowup ? Icons.access_time_rounded : Icons.email_outlined);
+    final Color rowThemeColor = isLinkedInBuyer ? const Color(0xFF0A66C2) : themeColor;
 
     return Container(
       decoration: BoxDecoration(
@@ -813,9 +883,9 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               decoration: BoxDecoration(
-                color: themeColor.withValues(alpha: 0.12),
+                color: rowThemeColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: themeColor.withValues(alpha: 0.3)),
+                border: Border.all(color: rowThemeColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -823,14 +893,14 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                   Icon(
                     badgeIcon,
                     size: 12,
-                    color: themeColor,
+                    color: rowThemeColor,
                   ),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
                       badgeText,
                       style: TextStyle(
-                          color: themeColor,
+                          color: rowThemeColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 10),
                       overflow: TextOverflow.ellipsis,
@@ -900,6 +970,25 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                    if (isLinkedInBuyer) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0A66C2).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFF0A66C2).withValues(alpha: 0.3)),
+                        ),
+                        child: const Text(
+                          '💼 LinkedIn',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0A66C2),
+                          ),
                         ),
                       ),
                     ],
@@ -1058,22 +1147,32 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                 width: 125,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: themeColor,
+                    backgroundColor: rowThemeColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     elevation: 1,
                   ),
                   onPressed: () async {
-                    await UrlUtils.handleSendEmailWithConfirmation(
-                      context: context,
-                      buyer: buyer,
-                      provider: p,
-                    );
+                    if (isLinkedInBuyer) {
+                      await UrlUtils.handleLinkedInOutreachDialog(
+                        context: context,
+                        buyer: buyer,
+                        provider: p,
+                      );
+                    } else {
+                      await UrlUtils.handleSendEmailWithConfirmation(
+                        context: context,
+                        buyer: buyer,
+                        provider: p,
+                      );
+                    }
                   },
-                  icon: const Icon(Icons.send_rounded, size: 12),
+                  icon: Icon(isLinkedInBuyer ? Icons.business_center_rounded : Icons.send_rounded, size: 12),
                   label: Text(
-                    buyer.actionButtonLabel,
+                    isLinkedInBuyer
+                        ? (isBuyerFollowup ? 'LinkedIn DM' : 'Connect Note')
+                        : buyer.actionButtonLabel,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1081,7 +1180,9 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
               ),
               const SizedBox(width: 4),
               Tooltip(
-                message: '1-Click: Mark as Sent (If already sent in Outlook)',
+                message: isLinkedInBuyer
+                    ? '1-Click: Mark Sent & Auto-Schedule Next Follow-Up (+4 Days)'
+                    : '1-Click: Mark as Sent (If already sent in Outlook)',
                 child: InkWell(
                   onTap: () async {
                     await p.markEmailSent(buyer.id, targetBuyer: buyer);

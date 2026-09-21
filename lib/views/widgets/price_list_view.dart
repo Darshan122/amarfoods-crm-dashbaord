@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/product_price.dart';
 import '../../providers/buyer_provider.dart';
 import '../../services/price_pdf_service.dart';
+import 'catalog_directory_dialog.dart';
 
 class PriceListView extends StatefulWidget {
   final BuyerProvider provider;
@@ -177,6 +178,23 @@ class _PriceListViewState extends State<PriceListView> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
+                      ),
+                    ),
+                    // 47 HSN Product Directory Button
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => const CatalogDirectoryDialog(),
+                        );
+                      },
+                      icon: const Icon(Icons.menu_book_rounded, size: 16),
+                      label: const Text('47 HSN Catalog', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0xFFFDE047), width: 1.2),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                     // Update Weekly Prices Button

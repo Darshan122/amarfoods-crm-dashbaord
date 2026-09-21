@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../models/email_template.dart';
 import '../../services/template_service.dart';
 
@@ -11,6 +12,7 @@ class EmailTemplatesView extends StatefulWidget {
 
 class _EmailTemplatesViewState extends State<EmailTemplatesView> {
   final TemplateService _templateService = TemplateService();
+  String _selectedChannel = 'email'; // 'email' | 'linkedin'
 
   @override
   void initState() {
@@ -329,6 +331,7 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                                 subject: subjectCtrl.text.trim(),
                                 body: bodyCtrl.text,
                                 isDefault: template?.isDefault ?? false,
+                                channel: template?.channel ?? _selectedChannel,
                               );
 
                               await _templateService.saveTemplate(updated);
@@ -350,9 +353,66 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
     );
   }
 
+  Widget _buildChannelTab({
+    required String id,
+    required IconData icon,
+    required String label,
+    required int count,
+    required Color activeColor,
+  }) {
+    final bool isSelected = _selectedChannel == id;
+    return InkWell(
+      onTap: () => setState(() => _selectedChannel = id),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withValues(alpha: 0.12) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.8 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: isSelected ? activeColor : const Color(0xFF64748B), size: 18),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? activeColor : const Color(0xFF334155),
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected ? activeColor : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  color: isSelected ? Colors.white : const Color(0xFF64748B),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final templates = _templateService.templates;
+    final bool isLinkedIn = _selectedChannel == 'linkedin';
+    final templates = isLinkedIn ? _templateService.linkedInTemplates : _templateService.emailTemplates;
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -363,14 +423,16 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+              gradient: LinearGradient(
+                colors: isLinkedIn
+                    ? const [Color(0xFF004182), Color(0xFF0A66C2)]
+                    : const [Color(0xFF1E1B4B), Color(0xFF312E81)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4)),
+                BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 4)),
               ],
             ),
             child: Row(
@@ -378,24 +440,30 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
+                    color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.mark_email_read_rounded, color: Colors.white, size: 30),
+                  child: Icon(
+                    isLinkedIn ? Icons.business_center_rounded : Icons.mark_email_read_rounded,
+                    color: Colors.white,
+                    size: 30,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        'Email Template Manager',
-                        style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                        isLinkedIn ? 'LinkedIn Lead Outreach Playbook' : 'Email Template Manager',
+                        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
-                        'Create and edit pre-filled email subjects & bodies. Edits persist instantly without code changes.',
-                        style: TextStyle(color: Color(0xFFC7D2FE), fontSize: 13),
+                        isLinkedIn
+                            ? '5-Step Free LinkedIn Outreach cadence (Connect Note < 300 chars, Welcome Intro, Samples, Spot Rates, 47 Catalog).'
+                            : 'Create and edit pre-filled email subjects & bodies. Edits persist instantly without code changes.',
+                        style: const TextStyle(color: Color(0xFFC7D2FE), fontSize: 13),
                       ),
                     ],
                   ),
@@ -411,7 +479,7 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                     await _templateService.resetToDefaults();
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Restored all email templates to default!')),
+                        const SnackBar(content: Text('Restored all templates to default!')),
                       );
                     }
                   },
@@ -421,7 +489,7 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
+                    backgroundColor: isLinkedIn ? const Color(0xFF0077B5) : const Color(0xFF6366F1),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -433,21 +501,76 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
+
+          // Channel Switcher Tabs
+          Row(
+            children: [
+              _buildChannelTab(
+                id: 'email',
+                icon: Icons.mail_outline_rounded,
+                label: 'Email Templates',
+                count: _templateService.emailTemplates.length,
+                activeColor: const Color(0xFF2563EB),
+              ),
+              const SizedBox(width: 12),
+              _buildChannelTab(
+                id: 'linkedin',
+                icon: Icons.business_center_rounded,
+                label: 'LinkedIn Outreach (Free Cadence)',
+                count: _templateService.linkedInTemplates.length,
+                activeColor: const Color(0xFF0A66C2),
+              ),
+            ],
+          ),
+
+          if (isLinkedIn) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A66C2).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF0A66C2).withValues(alpha: 0.25)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.tips_and_updates_rounded, color: Color(0xFF0A66C2), size: 20),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '100% Free LinkedIn Outreach: Connect request note must be strictly under 300 characters. In Daily Work Area, click "💼 LinkedIn Outreach" to copy pre-filled text and jump straight into LinkedIn chat with 1 click.',
+                      style: TextStyle(color: Color(0xFF0A66C2), fontSize: 12, fontWeight: FontWeight.w500, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 18),
 
           // Template Cards Grid
           Expanded(
             child: templates.isEmpty
-                ? const Center(child: Text('No email templates found.'))
+                ? Center(
+                    child: Text(
+                      isLinkedIn ? 'No LinkedIn templates found.' : 'No email templates found.',
+                      style: const TextStyle(color: Color(0xFF64748B)),
+                    ),
+                  )
                 : ListView.separated(
                     itemCount: templates.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    separatorBuilder: (_, _) => const SizedBox(height: 16),
                     itemBuilder: (context, index) {
                       final t = templates[index];
                       Color badgeColor = const Color(0xFF2563EB);
                       Color badgeBg = const Color(0xFFEFF6FF);
 
-                      if (t.type == 'expo_first_email') {
+                      if (t.isLinkedIn) {
+                        badgeColor = const Color(0xFF0A66C2);
+                        badgeBg = const Color(0xFFE8F3FD);
+                      } else if (t.type == 'expo_first_email') {
                         badgeColor = const Color(0xFF0284C7);
                         badgeBg = const Color(0xFFE0F2FE);
                       } else if (t.type == 'first_email') {
@@ -464,15 +587,21 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                         badgeBg = const Color(0xFFD1FAE5);
                       }
 
+                      final bool isConnectNote = t.type.contains('connect');
+                      final bool isNoteOverLimit = isConnectNote && t.body.length > 300;
+
                       return Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(
+                            color: isNoteOverLimit ? const Color(0xFFEF4444) : const Color(0xFFE2E8F0),
+                            width: isNoteOverLimit ? 1.5 : 1.0,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.02),
+                              color: Colors.black.withValues(alpha: 0.02),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -494,12 +623,51 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                                     style: TextStyle(color: badgeColor, fontWeight: FontWeight.bold, fontSize: 11),
                                   ),
                                 ),
+                                if (t.isLinkedIn) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: isNoteOverLimit
+                                          ? const Color(0xFFFEE2E2)
+                                          : (isConnectNote ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9)),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      isConnectNote
+                                          ? '${t.body.length} / 300 chars (LinkedIn Limit)'
+                                          : '${t.body.length} chars',
+                                      style: TextStyle(
+                                        color: isNoteOverLimit
+                                            ? const Color(0xFFDC2626)
+                                            : (isConnectNote ? const Color(0xFF16A34A) : const Color(0xFF475569)),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(width: 12),
-                                Text(
-                                  t.name,
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                Expanded(
+                                  child: Text(
+                                    t.name,
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                                const Spacer(),
+                                IconButton(
+                                  tooltip: 'Copy Message Text',
+                                  icon: const Icon(Icons.copy_rounded, color: Color(0xFF64748B), size: 18),
+                                  onPressed: () {
+                                    Clipboard.setData(ClipboardData(text: t.body));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Copied "${t.name}" to clipboard!'),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  },
+                                ),
                                 IconButton(
                                   tooltip: 'Edit Template',
                                   icon: const Icon(Icons.edit_outlined, color: Color(0xFF2563EB), size: 20),
@@ -540,7 +708,10 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                             RichText(
                               text: TextSpan(
                                 children: [
-                                  const TextSpan(text: 'Subject: ', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF334155), fontSize: 13)),
+                                  TextSpan(
+                                    text: t.isLinkedIn ? 'Cadence Header: ' : 'Subject: ',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF334155), fontSize: 13),
+                                  ),
                                   TextSpan(text: t.subject, style: const TextStyle(color: Color(0xFF475569), fontSize: 13)),
                                 ],
                               ),
@@ -556,9 +727,9 @@ class _EmailTemplatesViewState extends State<EmailTemplatesView> {
                               ),
                               child: Text(
                                 t.body,
-                                maxLines: 4,
+                                maxLines: 5,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF475569), height: 1.4),
                               ),
                             ),
                           ],

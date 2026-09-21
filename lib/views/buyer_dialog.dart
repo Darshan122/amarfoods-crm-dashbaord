@@ -37,7 +37,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
   String _clientReply = 'Pending';
   String _marketType = 'International';
 
-  final List<String> _connectionTypes = ['Email', 'WhatsApp', 'Viber', 'Web Form', 'Social Media'];
+  final List<String> _connectionTypes = ['Email', 'WhatsApp', 'LinkedIn', 'Viber', 'Web Form', 'Social Media'];
   final List<String> _statuses = ['New', 'Contacted', 'First Email Sent', 'Follow-Up Sent', 'Replied', 'Hold'];
   final List<String> _clientReplies = ['Pending', 'Hold', 'Yes', 'No'];
   final List<String> _marketTypes = ['International', 'Domestic'];
@@ -279,9 +279,9 @@ class _BuyerDialogState extends State<BuyerDialog> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Email Addresses *',
-                              style: TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.bold, fontSize: 13),
+                            Text(
+                              _connectionType == 'LinkedIn' ? 'Email Addresses (Optional for LinkedIn)' : 'Email Addresses *',
+                              style: const TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                             const SizedBox(height: 2),
                             Text('Press Enter or click + Add Email to add another email.', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
@@ -301,6 +301,7 @@ class _BuyerDialogState extends State<BuyerDialog> {
                                         onFieldSubmitted: (_) => _addEmailField(),
                                         decoration: _inputDecoration(idx == 0 ? 'Primary Email (primary@company.com)' : 'Secondary Email ${idx + 1}'),
                                         validator: (val) {
+                                          if (_connectionType == 'LinkedIn') return null;
                                           if (idx == 0 && (val == null || val.trim().isEmpty)) {
                                             return 'Primary email is required';
                                           }
@@ -352,11 +353,13 @@ class _BuyerDialogState extends State<BuyerDialog> {
                       _buildFormPair(
                         isMobile,
                         _buildLabeledField(
-                          label: 'Website URL',
+                          label: _connectionType == 'LinkedIn' ? 'LinkedIn Profile / Website URL' : 'Website URL',
                           child: TextFormField(
                             controller: _websiteCtrl,
                             style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
-                            decoration: _inputDecoration('https://...'),
+                            decoration: _inputDecoration(_connectionType == 'LinkedIn'
+                                ? 'https://www.linkedin.com/in/... or website'
+                                : 'https://...'),
                           ),
                         ),
                         Column(

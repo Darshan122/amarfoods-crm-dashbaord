@@ -1,6 +1,7 @@
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:js' as js;
 
 import 'template_service.dart';
@@ -555,6 +556,304 @@ class UrlUtils {
           },
         ),
       ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LINKEDIN OUTREACH & SMART-ASSISTED FOLLOW-UP
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Opens LinkedIn profile or company search
+  static void launchLinkedInProfile(Buyer buyer) {
+    String url = buyer.website.trim();
+    if (url.toLowerCase().contains('linkedin.com')) {
+      launchURL(url);
+      return;
+    }
+
+    // If website is not a direct LinkedIn link, open company search on LinkedIn
+    final cleanComp = buyer.company.trim();
+    final searchUrl = 'https://www.linkedin.com/search/results/all/?keywords=${Uri.encodeComponent(cleanComp)}';
+    launchURL(searchUrl);
+  }
+
+  /// Interactive LinkedIn Outreach Dialog:
+  /// 1. Pre-fills the stage-appropriate message (Connect Note, First Intro, Follow-up 1, 2, 3)
+  /// 2. Displays live character count (< 300 chars limit for connection notes)
+  /// 3. 1-Click Copy to clipboard
+  /// 4. 1-Click Open LinkedIn Profile / Chat
+  /// 5. 1-Click Mark as Contacted & auto-schedule next reminder (+4 to +7 days)
+  static Future<void> handleLinkedInOutreachDialog({
+    required BuildContext context,
+    required Buyer buyer,
+    required BuyerProvider provider,
+  }) async {
+    final templateService = TemplateService();
+    if (!templateService.isInitialized) {
+      await templateService.init();
+    }
+
+    EmailTemplate currentTemplate = templateService.getLinkedInTemplateForFollowup(buyer.followupCount);
+    final textCtrl = TextEditingController();
+
+    void updateText(EmailTemplate tpl) {
+      textCtrl.text = TemplateService.processPlaceholders(
+        tpl.body,
+        company: buyer.company,
+        followupCount: buyer.followupCount,
+      );
+    }
+
+    updateText(currentTemplate);
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            final int charCount = textCtrl.text.length;
+            final bool isConnectNote = currentTemplate.type == 'linkedin_connect';
+            final bool isOverLimit = isConnectNote && charCount > 300;
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Container(
+                width: 680,
+                padding: const EdgeInsets.all(24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0A66C2).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.business_center_rounded, color: Color(0xFF0A66C2), size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      buyer.company,
+                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF0A66C2).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: const Color(0xFF0A66C2).withValues(alpha: 0.3)),
+                                      ),
+                                      child: Text(
+                                        'LinkedIn Follow-up #${buyer.followupCount}',
+                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0A66C2)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Text(
+                                  'Smart LinkedIn outreach — copy message, open chat, and log reminder.',
+                                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Stage Selector Dropdown
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.filter_list_rounded, size: 18, color: Color(0xFF475569)),
+                            const SizedBox(width: 10),
+                            const Text('Select Stage:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF334155))),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: currentTemplate.type,
+                                  isDense: true,
+                                  items: templateService.linkedInTemplates.map((t) {
+                                    return DropdownMenuItem<String>(
+                                      value: t.type,
+                                      child: Text(t.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    );
+                                  }).toList(),
+                                  onChanged: (newType) {
+                                    if (newType != null) {
+                                      setDialogState(() {
+                                        currentTemplate = templateService.getTemplateForType(newType, buyer.followupCount);
+                                        updateText(currentTemplate);
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Character count banner (especially crucial for 300 char connection note limit)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            isConnectNote ? 'CONNECTION NOTE (< 300 CHARS):' : 'LINKEDIN MESSAGE:',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isOverLimit ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: isOverLimit ? const Color(0xFFEF4444) : const Color(0xFF22C55E)),
+                            ),
+                            child: Text(
+                              isConnectNote ? '$charCount / 300 chars' : '$charCount chars',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isOverLimit ? const Color(0xFFB91C1C) : const Color(0xFF15803D),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Message Body Field
+                      TextField(
+                        controller: textCtrl,
+                        maxLines: 7,
+                        onChanged: (_) => setDialogState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'Type your message text here...',
+                          contentPadding: const EdgeInsets.all(12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Action buttons: Copy, Open Profile, Mark Sent
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        alignment: WrapAlignment.end,
+                        children: [
+                          // 1. Copy Message Button
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF0F172A),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: textCtrl.text));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: const [
+                                      Icon(Icons.check_circle_rounded, color: Color(0xFF4ADE80), size: 18),
+                                      SizedBox(width: 8),
+                                      Text('Copied LinkedIn message to clipboard!'),
+                                    ],
+                                  ),
+                                  backgroundColor: const Color(0xFF0F172A),
+                                  duration: const Duration(seconds: 2),
+                                  behavior: SnackBarBehavior.floating,
+                                  width: 320,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.copy_rounded, size: 16),
+                            label: const Text('Copy Message', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+
+                          // 2. Open LinkedIn Profile / Search
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0A66C2),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () => launchLinkedInProfile(buyer),
+                            icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                            label: const Text('Open LinkedIn', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+
+                          // 3. Mark Follow-Up Sent & Auto-Schedule Next Reminder
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF009647),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () async {
+                              Navigator.pop(ctx);
+                              await provider.markEmailSent(buyer.id, targetBuyer: buyer);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        const Icon(Icons.check_circle_rounded, color: Color(0xFF4ADE80), size: 18),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            '✅ Logged LinkedIn outreach for "${buyer.company}" & scheduled next follow-up!',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: const Color(0xFF0F172A),
+                                    duration: const Duration(seconds: 3),
+                                    behavior: SnackBarBehavior.floating,
+                                    width: 440,
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.task_alt_rounded, size: 16),
+                            label: const Text('Mark Sent & Set Follow-Up', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

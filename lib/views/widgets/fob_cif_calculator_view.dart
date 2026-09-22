@@ -37,6 +37,14 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
   @override
   void initState() {
     super.initState();
+    _usdRate = widget.provider.usdRate;
+    _is40Hc = widget.provider.is40Hc;
+    _profitMarginInr = widget.provider.profitMarginInr;
+    _customPortName = widget.provider.destinationPort;
+    _selectedPortPreset = widget.provider.destinationPort;
+    _seaFreightUsd = widget.provider.seaFreightUsd;
+    _marineInsuranceInr = widget.provider.marineInsuranceInr;
+
     _usdController = TextEditingController(text: _usdRate.toStringAsFixed(2));
     _baseCostController = TextEditingController(text: _baseCostInr.toStringAsFixed(2));
     _marginController = TextEditingController(text: _profitMarginInr.toStringAsFixed(2));
@@ -44,8 +52,20 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
     _insuranceController = TextEditingController(text: _marineInsuranceInr.toStringAsFixed(0));
     _customPortController = TextEditingController(text: _customPortName);
 
-    // Default select first product if available
-    if (widget.provider.prices.isNotEmpty) {
+    // Select matching product by saved code or first available
+    ProductPrice? matched;
+    for (final p in widget.provider.prices) {
+      if (p.id == widget.provider.selectedProductCode) {
+        matched = p;
+        break;
+      }
+    }
+
+    if (matched != null) {
+      _selectedProduct = matched;
+      _baseCostInr = matched.currentPrice;
+      _baseCostController.text = _baseCostInr.toStringAsFixed(2);
+    } else if (widget.provider.prices.isNotEmpty) {
       _selectedProduct = widget.provider.prices.first;
       _baseCostInr = _selectedProduct!.currentPrice;
       _baseCostController.text = _baseCostInr.toStringAsFixed(2);
@@ -84,12 +104,12 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
       _baseCostInr = p.currentPrice;
       _baseCostController.text = _baseCostInr.toStringAsFixed(2);
     });
+    widget.provider.saveCalculatorSettings(productCode: p.id, syncToSheet: false);
   }
 
   void _onContainerTypeChanged(bool is40) {
     setState(() {
       _is40Hc = is40;
-      // Auto-update freight if matched with preset
       final matched = ExportPriceCalculation.destinationPresets.firstWhere(
         (preset) => preset.displayName == _selectedPortPreset,
         orElse: () => ExportPriceCalculation.destinationPresets.first,
@@ -97,14 +117,17 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
       _seaFreightUsd = is40 ? matched.freight40HcUsd : matched.freight20GpUsd;
       _freightController.text = _seaFreightUsd.toStringAsFixed(0);
     });
+    widget.provider.saveCalculatorSettings(
+      is40Hc: is40,
+      freight: _seaFreightUsd,
+      syncToSheet: false,
+    );
   }
 
   void _onPortPresetSelected(String presetName) {
     setState(() {
       _selectedPortPreset = presetName;
-      if (presetName == 'Custom Port') {
-        // keep current custom port
-      } else {
+      if (presetName != 'Custom Port') {
         final preset = ExportPriceCalculation.destinationPresets.firstWhere(
           (p) => p.displayName == presetName,
         );
@@ -114,6 +137,48 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
         _freightController.text = _seaFreightUsd.toStringAsFixed(0);
       }
     });
+    widget.provider.saveCalculatorSettings(
+      port: _customPortName,
+      freight: _seaFreightUsd,
+      syncToSheet: false,
+    );
+  }
+
+  bool _isSyncing = false;
+
+  Future<void> _saveAndSyncAllToSheet() async {
+    setState(() => _isSyncing = true);
+    await widget.provider.saveCalculatorSettings(
+      usdRate: _usdRate,
+      is40Hc: _is40Hc,
+      margin: _profitMarginInr,
+      port: _customPortName,
+      freight: _seaFreightUsd,
+      insurance: _marineInsuranceInr,
+      productCode: _selectedProduct?.id,
+      syncToSheet: true,
+    );
+    if (mounted) {
+      setState(() => _isSyncing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Saved! USD Rate ₹${_usdRate.toStringAsFixed(2)} is preserved permanently on refresh and synced to Google Sheets.',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF0F766E),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   void _copyQuotationToClipboard(ExportPriceCalculation calc) {
@@ -422,6 +487,28 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
+                    ElevatedButton.icon(
+                      onPressed: _isSyncing ? null : _saveAndSyncAllToSheet,
+                      icon: _isSyncing
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.cloud_upload_rounded, size: 16),
+                      label: Text(
+                        _isSyncing ? 'Syncing...' : 'Save & Sync Sheet',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0D9488),
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0xFF5EEAD4), width: 1.2),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                    ),
                   ],
                 );
 
@@ -533,6 +620,7 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
                                       final parsed = double.tryParse(val);
                                       if (parsed != null && parsed > 0) {
                                         setState(() => _usdRate = parsed);
+                                        widget.provider.saveCalculatorSettings(usdRate: parsed, syncToSheet: false);
                                       }
                                     },
                                   ),
@@ -548,6 +636,7 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
                                             _usdRate = rate;
                                             _usdController.text = rate.toStringAsFixed(2);
                                           });
+                                          widget.provider.saveCalculatorSettings(usdRate: rate, syncToSheet: false);
                                         },
                                         borderRadius: BorderRadius.circular(6),
                                         child: Container(
@@ -568,6 +657,17 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
                                         ),
                                       );
                                     }).toList(),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: const [
+                                      Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF0F766E)),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Saved locally (preserved on refresh)',
+                                        style: TextStyle(fontSize: 10, color: Color(0xFF0F766E), fontWeight: FontWeight.w500),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -746,7 +846,10 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
                                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                           onChanged: (val) {
                                             final v = double.tryParse(val);
-                                            if (v != null) setState(() => _profitMarginInr = v);
+                                            if (v != null) {
+                                              setState(() => _profitMarginInr = v);
+                                              widget.provider.saveCalculatorSettings(margin: v, syncToSheet: false);
+                                            }
                                           },
                                         ),
                                       ),
@@ -800,6 +903,23 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
                                       },
                                     ),
                                   ),
+                                  if (_selectedPortPreset == 'Custom Port') ...[
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: _customPortController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Custom Port Name',
+                                        labelStyle: TextStyle(fontSize: 11),
+                                        isDense: true,
+                                      ),
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                      onChanged: (val) {
+                                        setState(() => _customPortName = val);
+                                        widget.provider.saveCalculatorSettings(port: val, syncToSheet: false);
+                                      },
+                                    ),
+                                  ],
+                                  const SizedBox(height: 6),
                                   Row(
                                     children: [
                                       Expanded(
@@ -814,7 +934,10 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
                                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                           onChanged: (val) {
                                             final v = double.tryParse(val);
-                                            if (v != null) setState(() => _seaFreightUsd = v);
+                                            if (v != null) {
+                                              setState(() => _seaFreightUsd = v);
+                                              widget.provider.saveCalculatorSettings(freight: v, syncToSheet: false);
+                                            }
                                           },
                                         ),
                                       ),
@@ -831,7 +954,10 @@ class _FobCifCalculatorViewState extends State<FobCifCalculatorView> {
                                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                           onChanged: (val) {
                                             final v = double.tryParse(val);
-                                            if (v != null) setState(() => _marineInsuranceInr = v);
+                                            if (v != null) {
+                                              setState(() => _marineInsuranceInr = v);
+                                              widget.provider.saveCalculatorSettings(insurance: v, syncToSheet: false);
+                                            }
                                           },
                                         ),
                                       ),

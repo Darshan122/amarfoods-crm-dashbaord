@@ -8,7 +8,7 @@ import '../models/product_price.dart';
 
 class ApiService {
   static const String defaultScriptUrl =
-      'https://script.google.com/macros/s/AKfycbyOFxeG3sZp7Ccs8jlhfJ2osgQuQA2dHQ2pRZvNel7fL9ol82clds3fpKkRr1aNmP6C/exec';
+      'https://script.google.com/macros/s/AKfycbyQgrGPICSqOlKPjc-lDN8o7wL8L-mqZ2W487XApba9lEt0InWNcVX9Z4RPUe9h3ljS/exec';
 
   static const String sheetGvizCsvUrl =
       'https://docs.google.com/spreadsheets/d/1jtqUJxkvQoyxTccC1gOUv1WejJigm7DMX9P66OyrhuA/gviz/tq?tqx=out:csv&sheet=Sheet1';
@@ -892,6 +892,75 @@ class ApiService {
       debugPrint('ApiService: HTTP saveWeeklyPrices failed: $e');
     }
     return true;
+  }
+
+  /// Sync FOB & CIF Calculator parameters to Google Sheets (FOB_CIF_Calculator tab)
+  Future<bool> syncCalculatorInputs({
+    required double usdRate,
+    String? destinationPort,
+    double? freight,
+    double? insurance,
+    double? margin,
+    String? customScriptUrl,
+  }) async {
+    final targetScriptUrl = (customScriptUrl != null && customScriptUrl.trim().isNotEmpty)
+        ? customScriptUrl.trim()
+        : _scriptUrl;
+
+    final Map<String, dynamic> payload = {
+      'action': 'updateFobCifInputs',
+      'usdRate': usdRate,
+      if (destinationPort != null) 'destinationPort': destinationPort,
+      if (freight != null) 'freight40': freight,
+      if (insurance != null) 'insurance': insurance,
+      if (margin != null) 'margin': margin,
+    };
+
+    final String payloadJson = json.encode(payload);
+    final String getUrl =
+        '$targetScriptUrl?action=updateFobCifInputs&usdRate=$usdRate'
+        '${destinationPort != null ? '&destinationPort=${Uri.encodeComponent(destinationPort)}' : ''}'
+        '${freight != null ? '&freight40=$freight' : ''}'
+        '${insurance != null ? '&insurance=$insurance' : ''}'
+        '${margin != null ? '&margin=$margin' : ''}';
+
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('fetch', [
+          targetScriptUrl,
+          js.JsObject.jsify({
+            'method': 'POST',
+            'mode': 'no-cors',
+            'headers': {'Content-Type': 'text/plain;charset=utf-8'},
+            'body': payloadJson,
+          }),
+        ]);
+
+        js.context.callMethod('eval', ['''
+          (function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "$getUrl", true);
+            xhr.send();
+          })();
+        ''']);
+        debugPrint('ApiService: syncCalculatorInputs(usdRate: $usdRate) sent via POST & GET');
+        return true;
+      } catch (e) {
+        debugPrint('ApiService: Web syncCalculatorInputs error: $e');
+      }
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(targetScriptUrl),
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: payloadJson,
+      ).timeout(const Duration(seconds: 8));
+      return response.statusCode == 200 || response.statusCode == 302;
+    } catch (e) {
+      debugPrint('ApiService: HTTP syncCalculatorInputs failed: $e');
+      return true;
+    }
   }
 
   Future<List<PriceHistoryItem>> fetchPriceHistory({String? customScriptUrl}) async {

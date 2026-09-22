@@ -48,6 +48,7 @@ class BuyerProvider extends ChangeNotifier {
     loadExpos();
     loadPrices();
     loadPriceHistory();
+    loadCalculatorSettings();
   }
 
   // Getters
@@ -1125,6 +1126,123 @@ class BuyerProvider extends ChangeNotifier {
       await loadPriceHistory();
     }
     return ok;
+  }
+
+  // ------------------------------------------------------------------
+  // FOB & CIF EXPORT CALCULATOR STATE & PERSISTENCE
+  // ------------------------------------------------------------------
+  double _usdRate = 88.00;
+  bool _is40Hc = true;
+  double _profitMarginInr = 10.00;
+  String _destinationPort = 'Hai Phong (Vietnam)';
+  double _seaFreightUsd = 350.00;
+  double _marineInsuranceInr = 2950.00;
+  String _selectedProductCode = 'WO-01';
+
+  double get usdRate => _usdRate;
+  bool get is40Hc => _is40Hc;
+  double get profitMarginInr => _profitMarginInr;
+  String get destinationPort => _destinationPort;
+  double get seaFreightUsd => _seaFreightUsd;
+  double get marineInsuranceInr => _marineInsuranceInr;
+  String get selectedProductCode => _selectedProductCode;
+
+  static const String _prefUsdRateKey = 'amar_crm_fob_usd_rate_v2';
+  static const String _prefIs40HcKey = 'amar_crm_fob_is40hc_v2';
+  static const String _prefMarginKey = 'amar_crm_fob_margin_v2';
+  static const String _prefPortKey = 'amar_crm_fob_port_v2';
+  static const String _prefFreightKey = 'amar_crm_fob_freight_v2';
+  static const String _prefInsuranceKey = 'amar_crm_fob_insurance_v2';
+  static const String _prefProductCodeKey = 'amar_crm_fob_prod_code_v2';
+
+  Future<void> loadCalculatorSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.containsKey(_prefUsdRateKey)) {
+        final val = prefs.getDouble(_prefUsdRateKey);
+        if (val != null && val > 0) _usdRate = val;
+      }
+      if (prefs.containsKey(_prefIs40HcKey)) {
+        _is40Hc = prefs.getBool(_prefIs40HcKey) ?? true;
+      }
+      if (prefs.containsKey(_prefMarginKey)) {
+        final val = prefs.getDouble(_prefMarginKey);
+        if (val != null) _profitMarginInr = val;
+      }
+      if (prefs.containsKey(_prefPortKey)) {
+        _destinationPort = prefs.getString(_prefPortKey) ?? 'Hai Phong (Vietnam)';
+      }
+      if (prefs.containsKey(_prefFreightKey)) {
+        final val = prefs.getDouble(_prefFreightKey);
+        if (val != null && val >= 0) _seaFreightUsd = val;
+      }
+      if (prefs.containsKey(_prefInsuranceKey)) {
+        final val = prefs.getDouble(_prefInsuranceKey);
+        if (val != null && val >= 0) _marineInsuranceInr = val;
+      }
+      if (prefs.containsKey(_prefProductCodeKey)) {
+        _selectedProductCode = prefs.getString(_prefProductCodeKey) ?? 'WO-01';
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading calculator settings: $e');
+    }
+  }
+
+  Future<void> saveCalculatorSettings({
+    double? usdRate,
+    bool? is40Hc,
+    double? margin,
+    String? port,
+    double? freight,
+    double? insurance,
+    String? productCode,
+    bool syncToSheet = false,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (usdRate != null && usdRate > 0) {
+        _usdRate = usdRate;
+        await prefs.setDouble(_prefUsdRateKey, usdRate);
+      }
+      if (is40Hc != null) {
+        _is40Hc = is40Hc;
+        await prefs.setBool(_prefIs40HcKey, is40Hc);
+      }
+      if (margin != null) {
+        _profitMarginInr = margin;
+        await prefs.setDouble(_prefMarginKey, margin);
+      }
+      if (port != null && port.isNotEmpty) {
+        _destinationPort = port;
+        await prefs.setString(_prefPortKey, port);
+      }
+      if (freight != null && freight >= 0) {
+        _seaFreightUsd = freight;
+        await prefs.setDouble(_prefFreightKey, freight);
+      }
+      if (insurance != null && insurance >= 0) {
+        _marineInsuranceInr = insurance;
+        await prefs.setDouble(_prefInsuranceKey, insurance);
+      }
+      if (productCode != null && productCode.isNotEmpty) {
+        _selectedProductCode = productCode;
+        await prefs.setString(_prefProductCodeKey, productCode);
+      }
+      notifyListeners();
+
+      if (syncToSheet) {
+        await _apiService.syncCalculatorInputs(
+          usdRate: _usdRate,
+          destinationPort: _destinationPort,
+          freight: _seaFreightUsd,
+          insurance: _marineInsuranceInr,
+          margin: _profitMarginInr,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving calculator settings: $e');
+    }
   }
 
   @override

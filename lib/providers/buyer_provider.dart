@@ -8,7 +8,7 @@ import '../models/expo.dart';
 import '../models/product_price.dart';
 import '../services/api_service.dart';
 
-enum MainTab { dailyWorkArea, allImporters, analytics, emailTemplates, exposVisited, priceList }
+enum MainTab { dailyWorkArea, allImporters, analytics, emailTemplates, exposVisited, priceList, fobCifCalculator }
 
 class BuyerProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();

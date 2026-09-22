@@ -180,6 +180,20 @@ class _PriceListViewState extends State<PriceListView> {
                         elevation: 0,
                       ),
                     ),
+                    // FOB & CIF Calculator Button
+                    ElevatedButton.icon(
+                      onPressed: () => p.setActiveTab(MainTab.fobCifCalculator),
+                      icon: const Icon(Icons.calculate_rounded, size: 16),
+                      label: const Text('FOB & CIF Calculator', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F766E),
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0xFF5EEAD4), width: 1.2),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                    ),
                     // 47 HSN Product Directory Button
                     OutlinedButton.icon(
                       onPressed: () {

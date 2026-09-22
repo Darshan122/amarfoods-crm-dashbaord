@@ -10,6 +10,7 @@ import 'widgets/email_work_section.dart';
 import 'widgets/email_templates_view.dart';
 import 'widgets/expos_visited_view.dart';
 import 'widgets/price_list_view.dart';
+import 'widgets/fob_cif_calculator_view.dart';
 
 enum DisplayLayout { table, kanban }
 
@@ -77,7 +78,9 @@ class _DashboardViewState extends State<DashboardView> {
                               ? 3
                               : p.activeTab == MainTab.exposVisited
                                   ? 4
-                                  : 5,
+                                  : p.activeTab == MainTab.priceList
+                                      ? 5
+                                      : 6,
               onTap: (index) {
                 if (index == 0) p.setActiveTab(MainTab.dailyWorkArea);
                 if (index == 1) p.setActiveTab(MainTab.allImporters);
@@ -85,6 +88,7 @@ class _DashboardViewState extends State<DashboardView> {
                 if (index == 3) p.setActiveTab(MainTab.emailTemplates);
                 if (index == 4) p.setActiveTab(MainTab.exposVisited);
                 if (index == 5) p.setActiveTab(MainTab.priceList);
+                if (index == 6) p.setActiveTab(MainTab.fobCifCalculator);
               },
               type: BottomNavigationBarType.fixed,
               selectedItemColor: const Color(0xFF0F766E),
@@ -115,6 +119,10 @@ class _DashboardViewState extends State<DashboardView> {
                 const BottomNavigationBarItem(
                   icon: Icon(Icons.currency_rupee_rounded),
                   label: 'Prices',
+                ),
+                const BottomNavigationBarItem(
+                  icon: Icon(Icons.calculate_rounded),
+                  label: 'FOB/CIF',
                 ),
               ],
             )
@@ -149,7 +157,9 @@ class _DashboardViewState extends State<DashboardView> {
                                     ? ExposVisitedView(provider: p)
                                     : p.activeTab == MainTab.priceList
                                         ? PriceListView(provider: p)
-                                        : _buildAllImportersView(p),
+                                        : p.activeTab == MainTab.fobCifCalculator
+                                            ? FobCifCalculatorView(provider: p)
+                                            : _buildAllImportersView(p),
               ),
             ),
           ],
@@ -369,6 +379,12 @@ class _DashboardViewState extends State<DashboardView> {
                   icon: Icons.currency_rupee_rounded,
                   isActive: p.activeTab == MainTab.priceList,
                   onTap: () => p.setActiveTab(MainTab.priceList),
+                ),
+                _buildNavTab(
+                  label: 'FOB/CIF Calc',
+                  icon: Icons.calculate_rounded,
+                  isActive: p.activeTab == MainTab.fobCifCalculator,
+                  onTap: () => p.setActiveTab(MainTab.fobCifCalculator),
                 ),
               ],
             ),

@@ -260,38 +260,40 @@ class _DashboardViewState extends State<DashboardView> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: const BoxDecoration(
         color: Color(0xFF8B2C69), // Deep Purple
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Official Amar Foods Logo Image
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1.5),
                 ),
               ],
             ),
             child: Image.asset(
               'assets/images/amar_foods_logo.png',
-              height: 38,
+              height: 32,
               fit: BoxFit.contain,
-              errorBuilder: (ctx, err, stack) => const Icon(Icons.business_rounded, color: Color(0xFF8B2C69), size: 24),
+              errorBuilder: (ctx, err, stack) => const Icon(Icons.business_rounded, color: Color(0xFF8B2C69), size: 22),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
 
           // Title & Tagline
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
@@ -300,123 +302,144 @@ class _DashboardViewState extends State<DashboardView> {
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
-                      fontSize: 18,
+                      fontSize: 16,
                       letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
                       color: const Color(0xFF009647),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Text(
                       'BUYER CRM',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 10,
+                        fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 1),
               const Text(
                 'Dehydrated Onion, Garlic & Food Products Importer Follow-Up Tracker',
                 style: TextStyle(
                   color: Colors.white70,
-                  fontSize: 11,
+                  fontSize: 10.5,
                 ),
               ),
             ],
           ),
 
+          const SizedBox(width: 16),
           const Spacer(),
 
-          // Navigation Segmented Tabs Bar (Matching Screenshots!)
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.25),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                _buildNavTab(
-                  label: 'Daily Work Area',
-                  icon: Icons.calendar_today_rounded,
-                  isActive: p.activeTab == MainTab.dailyWorkArea,
-                  onTap: () => p.setActiveTab(MainTab.dailyWorkArea),
+          // Navigation Segmented Tabs Bar
+          Flexible(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(9),
                 ),
-                _buildNavTab(
-                  label: 'All Buyers (${p.totalBuyersCount})',
-                  icon: Icons.people_outline_rounded,
-                  isActive: p.activeTab == MainTab.allImporters,
-                  onTap: () => p.setActiveTab(MainTab.allImporters),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildNavTab(
+                      label: 'Daily Work Area',
+                      icon: Icons.calendar_today_rounded,
+                      isActive: p.activeTab == MainTab.dailyWorkArea,
+                      onTap: () => p.setActiveTab(MainTab.dailyWorkArea),
+                    ),
+                    _buildNavTab(
+                      label: 'All Buyers (${p.totalBuyersCount})',
+                      icon: Icons.people_outline_rounded,
+                      isActive: p.activeTab == MainTab.allImporters,
+                      onTap: () => p.setActiveTab(MainTab.allImporters),
+                    ),
+                    _buildNavTab(
+                      label: 'Analytics',
+                      icon: Icons.bar_chart_rounded,
+                      isActive: p.activeTab == MainTab.analytics,
+                      onTap: () => p.setActiveTab(MainTab.analytics),
+                    ),
+                    _buildNavTab(
+                      label: 'Email Templates',
+                      icon: Icons.mark_email_read_rounded,
+                      isActive: p.activeTab == MainTab.emailTemplates,
+                      onTap: () => p.setActiveTab(MainTab.emailTemplates),
+                    ),
+                    _buildNavTab(
+                      label: 'Expos Visited',
+                      icon: Icons.business_center_rounded,
+                      isActive: p.activeTab == MainTab.exposVisited,
+                      onTap: () => p.setActiveTab(MainTab.exposVisited),
+                    ),
+                    _buildNavTab(
+                      label: 'Price List',
+                      icon: Icons.currency_rupee_rounded,
+                      isActive: p.activeTab == MainTab.priceList,
+                      onTap: () => p.setActiveTab(MainTab.priceList),
+                    ),
+                    _buildNavTab(
+                      label: 'FOB/CIF Calc',
+                      icon: Icons.calculate_outlined,
+                      isActive: p.activeTab == MainTab.fobCifCalculator,
+                      onTap: () => p.setActiveTab(MainTab.fobCifCalculator),
+                    ),
+                  ],
                 ),
-                _buildNavTab(
-                  label: 'Analytics',
-                  icon: Icons.bar_chart_rounded,
-                  isActive: p.activeTab == MainTab.analytics,
-                  onTap: () => p.setActiveTab(MainTab.analytics),
-                ),
-                _buildNavTab(
-                  label: 'Email Templates',
-                  icon: Icons.mark_email_read_rounded,
-                  isActive: p.activeTab == MainTab.emailTemplates,
-                  onTap: () => p.setActiveTab(MainTab.emailTemplates),
-                ),
-                _buildNavTab(
-                  label: 'Expos Visited',
-                  icon: Icons.business_center_rounded,
-                  isActive: p.activeTab == MainTab.exposVisited,
-                  onTap: () => p.setActiveTab(MainTab.exposVisited),
-                ),
-                _buildNavTab(
-                  label: 'Price List',
-                  icon: Icons.currency_rupee_rounded,
-                  isActive: p.activeTab == MainTab.priceList,
-                  onTap: () => p.setActiveTab(MainTab.priceList),
-                ),
-                _buildNavTab(
-                  label: 'FOB/CIF Calc',
-                  icon: Icons.calculate_rounded,
-                  isActive: p.activeTab == MainTab.fobCifCalculator,
-                  onTap: () => p.setActiveTab(MainTab.fobCifCalculator),
-                ),
-              ],
+              ),
             ),
           ),
 
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
 
-          // Settings Button
-          IconButton(
-            tooltip: 'Sheet Configuration',
-            icon: const Icon(Icons.settings_outlined, color: Colors.white70, size: 20),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (_) => ConfigDialog(
-                  currentUrl: p.scriptUrl,
-                  onSaveUrl: (url) => p.setScriptUrl(url),
+          // Settings Button with matching 36px height
+          Tooltip(
+            message: 'Sheet Configuration',
+            child: Material(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => ConfigDialog(
+                      currentUrl: p.scriptUrl,
+                      onSaveUrl: (url) => p.setScriptUrl(url),
+                    ),
+                  );
+                },
+                child: const SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Center(
+                    child: Icon(Icons.settings_outlined, color: Colors.white, size: 19),
+                  ),
                 ),
-              );
-            },
+              ),
+            ),
           ),
 
           const SizedBox(width: 8),
 
-          // Green + Add Buyer Button
+          // Green + Add Buyer Button with matching 36px height
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF009647),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+              minimumSize: const Size(0, 36),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              elevation: 2,
+              elevation: 1,
             ),
             onPressed: () {
               showDialog(
@@ -432,7 +455,7 @@ class _DashboardViewState extends State<DashboardView> {
             icon: const Icon(Icons.add_rounded, size: 16),
             label: const Text(
               'Add Buyer',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
             ),
           ),
         ],
@@ -441,6 +464,10 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   Widget _buildMarketSegmentBar(BuyerProvider p) {
+    // Only display market filter when browsing buyers or daily work tasks
+    if (p.activeTab != MainTab.allImporters && p.activeTab != MainTab.dailyWorkArea) {
+      return const SizedBox.shrink();
+    }
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -533,32 +560,46 @@ class _DashboardViewState extends State<DashboardView> {
     required bool isActive,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 15,
-              color: isActive ? const Color(0xFF8B2C69) : Colors.white70,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: isActive ? const Color(0xFF8B2C69) : Colors.white70,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                fontSize: 12,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(7),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          decoration: BoxDecoration(
+            color: isActive ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(7),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1.5),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: isActive ? const Color(0xFF8B2C69) : Colors.white.withValues(alpha: 0.85),
               ),
-            ),
-          ],
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isActive ? const Color(0xFF8B2C69) : Colors.white.withValues(alpha: 0.90),
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

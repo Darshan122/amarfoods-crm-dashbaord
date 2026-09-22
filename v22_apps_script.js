@@ -1490,14 +1490,10 @@ function setupFobCifCalculatorSheet() {
   grid.push(["New York / Savannah, USA", 3200, 2400, "30 - 38 Days", "US East Coast"]);
   grid.push(["Port Klang, Malaysia", 400, 280, "12 - 15 Days", "Southeast Asia"]);
   grid.push(["Jakarta / Surabaya, Indonesia", 450, 320, "15 - 18 Days", "Southeast Asia"]);
-  // Row 59: Empty spacer
+  // Row 58: Empty spacer
   grid.push(["", "", "", "", ""]);
-  // Row 60: Section 8 Header
-  grid.push(["8. 24 BASELINE PRODUCTS - LIVE FOB & CIF EXPORT PRICE MATRIX (Auto-updates with USD Rate)", "", "", "", "", "", "", ""]);
-  // Row 61: Matrix Headers
-  grid.push(["Product Code", "Product Name & Form", "Quality / Grade", "Ex-Factory (₹/kg)", "FOB Pipavav ($/kg)", "CFR Hai Phong ($/kg)", "CIF Hai Phong ($/kg)", "40' HC CIF Total ($)"]);
 
-  // Set grid into sheet
+  // Set grid into sheet (Rows 1 to 58)
   sheet.getRange(1, 1, grid.length, 5).setValues(grid);
 
   // ─── STYLING & FORMATTING ───────────────────────────────────────────────
@@ -1592,6 +1588,7 @@ function setupFobCifCalculatorSheet() {
   sheet.getRange("B48:C48").setNumberFormat("$#,##0.00");
 
   // ─── SECTION 8: DYNAMIC 24 PRODUCTS MATRIX ──────────────────────────────
+  sheet.getRange(60, 1, 1, 8).setValues([["8. 24 BASELINE PRODUCTS - LIVE FOB & CIF EXPORT PRICE MATRIX (Auto-updates with USD Rate)", "", "", "", "", "", "", ""]]);
   sheet.getRange("A60:H60").merge()
     .setBackground("#0F766E")
     .setFontColor("#FFFFFF")
@@ -1599,6 +1596,7 @@ function setupFobCifCalculatorSheet() {
     .setFontSize(11)
     .setHorizontalAlignment("left");
 
+  sheet.getRange(61, 1, 1, 8).setValues([["Product Code", "Product Name & Form", "Quality / Grade", "Ex-Factory (₹/kg)", "FOB Pipavav ($/kg)", "CFR Hai Phong ($/kg)", "CIF Hai Phong ($/kg)", "40' HC CIF Total ($)"]]);
   sheet.getRange("A61:H61")
     .setBackground("#1E293B")
     .setFontColor("#FFFFFF")

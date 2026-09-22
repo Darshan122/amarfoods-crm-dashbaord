@@ -62,76 +62,13 @@ class _DashboardViewState extends State<DashboardView> {
   @override
   Widget build(BuildContext context) {
     final p = widget.provider;
-    final isMobile = MediaQuery.of(context).size.width < 768;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      bottomNavigationBar: isMobile
-          ? BottomNavigationBar(
-              currentIndex: p.activeTab == MainTab.dailyWorkArea
-                  ? 0
-                  : p.activeTab == MainTab.allImporters
-                      ? 1
-                      : p.activeTab == MainTab.analytics
-                          ? 2
-                          : p.activeTab == MainTab.emailTemplates
-                              ? 3
-                              : p.activeTab == MainTab.exposVisited
-                                  ? 4
-                                  : p.activeTab == MainTab.priceList
-                                      ? 5
-                                      : 6,
-              onTap: (index) {
-                if (index == 0) p.setActiveTab(MainTab.dailyWorkArea);
-                if (index == 1) p.setActiveTab(MainTab.allImporters);
-                if (index == 2) p.setActiveTab(MainTab.analytics);
-                if (index == 3) p.setActiveTab(MainTab.emailTemplates);
-                if (index == 4) p.setActiveTab(MainTab.exposVisited);
-                if (index == 5) p.setActiveTab(MainTab.priceList);
-                if (index == 6) p.setActiveTab(MainTab.fobCifCalculator);
-              },
-              type: BottomNavigationBarType.fixed,
-              selectedItemColor: const Color(0xFF0F766E),
-              unselectedItemColor: const Color(0xFF64748B),
-              selectedFontSize: 11,
-              unselectedFontSize: 11,
-              items: [
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.calendar_today_rounded),
-                  label: 'Daily Work',
-                ),
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.people_outline_rounded),
-                  label: 'Importers (${p.totalBuyersCount})',
-                ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.bar_chart_rounded),
-                  label: 'Analytics',
-                ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.mark_email_read_rounded),
-                  label: 'Templates',
-                ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.business_center_rounded),
-                  label: 'Expos',
-                ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.currency_rupee_rounded),
-                  label: 'Prices',
-                ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.calculate_rounded),
-                  label: 'FOB/CIF',
-                ),
-              ],
-            )
-          : null,
       body: SafeArea(
         child: Column(
           children: [
             // ------------------------------------------------------------------
-            // 1. TOP EXECUTIVE NAVIGATION HEADER BAR (Matching All Screenshots)
+            // 1. TOP EXECUTIVE NAVIGATION HEADER BAR (2-Tier: Brand & Tabs)
             // ------------------------------------------------------------------
             _buildVibrantExecutiveHeader(context, p),
 
@@ -168,294 +105,338 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
-  /// Top Executive Header Bar matching ALL 5 Screenshots
+  /// Top Executive Header Bar with 2-tier layout: Brand & Actions on top, Navigation Tabs strip below
   Widget _buildVibrantExecutiveHeader(BuildContext context, BuyerProvider p) {
-    final isMobile = MediaQuery.of(context).size.width < 768;
-
-    if (isMobile) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: const BoxDecoration(
-          color: Color(0xFF8B2C69),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Image.asset(
-                'assets/images/amar_foods_logo.png',
-                height: 24,
-                fit: BoxFit.contain,
-                errorBuilder: (ctx, err, stack) => const Icon(Icons.business_rounded, color: Color(0xFF8B2C69), size: 18),
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'AMAR FOODS',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 15,
-                  ),
-                ),
-                Text(
-                  'BUYER CRM',
-                  style: TextStyle(
-                    color: Color(0xFF4ADE80),
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            IconButton(
-              tooltip: 'Sheet Configuration',
-              icon: const Icon(Icons.settings_outlined, color: Colors.white70, size: 20),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (_) => ConfigDialog(
-                    currentUrl: p.scriptUrl,
-                    onSaveUrl: (url) => p.setScriptUrl(url),
-                  ),
-                );
-              },
-            ),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF009647),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                elevation: 2,
-              ),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (_) => BuyerDialog(
-                    nextSrNo: p.maxSrNo + 1,
-                    existingBuyers: p.buyers,
-                    defaultMarket: p.marketFilter != 'All' ? p.marketFilter : 'International',
-                    onSave: (newBuyer) => p.saveBuyer(newBuyer),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.add_rounded, size: 15),
-              label: const Text('Add', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-            ),
-          ],
-        ),
-      );
-    }
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isNarrow = screenWidth < 768;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: const BoxDecoration(
-        color: Color(0xFF8B2C69), // Deep Purple
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Official Amar Foods Logo Image
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1.5),
-                ),
-              ],
-            ),
-            child: Image.asset(
-              'assets/images/amar_foods_logo.png',
-              height: 32,
-              fit: BoxFit.contain,
-              errorBuilder: (ctx, err, stack) => const Icon(Icons.business_rounded, color: Color(0xFF8B2C69), size: 22),
-            ),
+        gradient: LinearGradient(
+          colors: [Color(0xFF701A52), Color(0xFF8B2C69), Color(0xFF962D71)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 6,
+            offset: Offset(0, 3),
           ),
-          const SizedBox(width: 12),
-
-          // Title & Tagline
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  const Text(
-                    'AMAR FOODS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                      letterSpacing: 0.5,
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── TIER 1: BRAND HEADER & EXECUTIVE ACTIONS ──
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isNarrow ? 12 : 20,
+              vertical: isNarrow ? 8 : 10,
+            ),
+            child: Row(
+              children: [
+                // Official Amar Foods Logo Image in crisp white card
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Image.asset(
+                    'assets/images/amar_foods_logo.png',
+                    height: isNarrow ? 26 : 32,
+                    fit: BoxFit.contain,
+                    errorBuilder: (ctx, err, stack) => Icon(
+                      Icons.business_rounded,
+                      color: const Color(0xFF8B2C69),
+                      size: isNarrow ? 20 : 24,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF009647),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'BUYER CRM',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
+                ),
+                const SizedBox(width: 10),
+
+                // Brand Title & Tagline / Sync Badge
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'AMAR FOODS',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: isNarrow ? 15 : 17,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF009647),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'BUYER CRM',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          if (!isNarrow) ...[
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white24, width: 0.8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: p.isLoading ? const Color(0xFFFDE047) : const Color(0xFF4ADE80),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    p.isLoading ? 'Syncing...' : '2-Way Sheet Sync Active',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      if (!isNarrow) ...[
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Dehydrated Onion, Garlic & Agro Products Importer Management System',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10.5,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                // Action Buttons: Sync / Refresh Button
+                Tooltip(
+                  message: 'Refresh & Sync all data from Google Sheet',
+                  child: InkWell(
+                    onTap: p.isLoading
+                        ? null
+                        : () {
+                            p.loadBuyers();
+                            p.loadExpos();
+                            p.loadPrices();
+                            p.loadPriceHistory();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Refreshing all data from Google Sheet...'),
+                                duration: Duration(seconds: 2),
+                                backgroundColor: Color(0xFF0F766E),
+                              ),
+                            );
+                          },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isNarrow ? 8 : 12,
+                        vertical: isNarrow ? 6 : 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          p.isLoading
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.sync_rounded, color: Colors.white, size: 16),
+                          if (!isNarrow) ...[
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Sync Sheet',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 1),
-              const Text(
-                'Dehydrated Onion, Garlic & Food Products Importer Follow-Up Tracker',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 10.5,
                 ),
-              ),
-            ],
-          ),
 
-          const SizedBox(width: 16),
-          const Spacer(),
+                const SizedBox(width: 8),
 
-          // Navigation Segmented Tabs Bar
-          Flexible(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildNavTab(
-                      label: 'Daily Work Area',
-                      icon: Icons.calendar_today_rounded,
-                      isActive: p.activeTab == MainTab.dailyWorkArea,
-                      onTap: () => p.setActiveTab(MainTab.dailyWorkArea),
+                // Settings Button (Apps Script Config)
+                Tooltip(
+                  message: 'Google Sheet & Apps Script Configuration',
+                  child: InkWell(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => ConfigDialog(
+                          currentUrl: p.scriptUrl,
+                          onSaveUrl: (url) => p.setScriptUrl(url),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Icon(Icons.settings_outlined, color: Colors.white, size: 17),
                     ),
-                    _buildNavTab(
-                      label: 'All Buyers (${p.totalBuyersCount})',
-                      icon: Icons.people_outline_rounded,
-                      isActive: p.activeTab == MainTab.allImporters,
-                      onTap: () => p.setActiveTab(MainTab.allImporters),
-                    ),
-                    _buildNavTab(
-                      label: 'Analytics',
-                      icon: Icons.bar_chart_rounded,
-                      isActive: p.activeTab == MainTab.analytics,
-                      onTap: () => p.setActiveTab(MainTab.analytics),
-                    ),
-                    _buildNavTab(
-                      label: 'Email Templates',
-                      icon: Icons.mark_email_read_rounded,
-                      isActive: p.activeTab == MainTab.emailTemplates,
-                      onTap: () => p.setActiveTab(MainTab.emailTemplates),
-                    ),
-                    _buildNavTab(
-                      label: 'Expos Visited',
-                      icon: Icons.business_center_rounded,
-                      isActive: p.activeTab == MainTab.exposVisited,
-                      onTap: () => p.setActiveTab(MainTab.exposVisited),
-                    ),
-                    _buildNavTab(
-                      label: 'Price List',
-                      icon: Icons.currency_rupee_rounded,
-                      isActive: p.activeTab == MainTab.priceList,
-                      onTap: () => p.setActiveTab(MainTab.priceList),
-                    ),
-                    _buildNavTab(
-                      label: 'FOB/CIF Calc',
-                      icon: Icons.calculate_outlined,
-                      isActive: p.activeTab == MainTab.fobCifCalculator,
-                      onTap: () => p.setActiveTab(MainTab.fobCifCalculator),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 12),
-
-          // Settings Button with matching 36px height
-          Tooltip(
-            message: 'Sheet Configuration',
-            child: Material(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => ConfigDialog(
-                      currentUrl: p.scriptUrl,
-                      onSaveUrl: (url) => p.setScriptUrl(url),
-                    ),
-                  );
-                },
-                child: const SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: Center(
-                    child: Icon(Icons.settings_outlined, color: Colors.white, size: 19),
                   ),
                 ),
-              ),
+
+                const SizedBox(width: 8),
+
+                // Emerald Green + Add Buyer Button
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF009647),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isNarrow ? 10 : 16,
+                      vertical: isNarrow ? 8 : 10,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 2,
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => BuyerDialog(
+                        nextSrNo: p.maxSrNo + 1,
+                        existingBuyers: p.buyers,
+                        defaultMarket: p.marketFilter != 'All' ? p.marketFilter : 'International',
+                        onSave: (newBuyer) => p.saveBuyer(newBuyer),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
+                  label: Text(
+                    isNarrow ? 'Add' : 'Add Buyer',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                  ),
+                ),
+              ],
             ),
           ),
 
-          const SizedBox(width: 8),
-
-          // Green + Add Buyer Button with matching 36px height
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF009647),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
-              minimumSize: const Size(0, 36),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              elevation: 1,
+          // ── TIER 2: DEDICATED NAVIGATION TABS STRIP ──
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFF5A1440).withValues(alpha: 0.95),
+              border: const Border(
+                top: BorderSide(color: Colors.white12, width: 1),
+              ),
             ),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (_) => BuyerDialog(
-                  nextSrNo: p.maxSrNo + 1,
-                  existingBuyers: p.buyers,
-                  defaultMarket: p.marketFilter != 'All' ? p.marketFilter : 'International',
-                  onSave: (newBuyer) => p.saveBuyer(newBuyer),
-                ),
-              );
-            },
-            icon: const Icon(Icons.add_rounded, size: 16),
-            label: const Text(
-              'Add Buyer',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  _buildNavTab(
+                    label: 'Daily Work Area',
+                    icon: Icons.event_note_rounded,
+                    badge: (p.overdueBuyers.length + p.followupTodayBuyers.length > 0)
+                        ? '${p.overdueBuyers.length + p.followupTodayBuyers.length}'
+                        : null,
+                    badgeColor: const Color(0xFFEF4444),
+                    isActive: p.activeTab == MainTab.dailyWorkArea,
+                    onTap: () => p.setActiveTab(MainTab.dailyWorkArea),
+                  ),
+                  _buildNavTab(
+                    label: 'All Buyers',
+                    icon: Icons.people_alt_rounded,
+                    badge: '${p.totalBuyersCount}',
+                    isActive: p.activeTab == MainTab.allImporters,
+                    onTap: () => p.setActiveTab(MainTab.allImporters),
+                  ),
+                  _buildNavTab(
+                    label: 'Analytics',
+                    icon: Icons.insights_rounded,
+                    isActive: p.activeTab == MainTab.analytics,
+                    onTap: () => p.setActiveTab(MainTab.analytics),
+                  ),
+                  _buildNavTab(
+                    label: 'Email Templates',
+                    icon: Icons.mark_email_read_rounded,
+                    isActive: p.activeTab == MainTab.emailTemplates,
+                    onTap: () => p.setActiveTab(MainTab.emailTemplates),
+                  ),
+                  _buildNavTab(
+                    label: 'Expos Visited',
+                    icon: Icons.business_center_rounded,
+                    badge: '${p.expos.length}',
+                    isActive: p.activeTab == MainTab.exposVisited,
+                    onTap: () => p.setActiveTab(MainTab.exposVisited),
+                  ),
+                  _buildNavTab(
+                    label: 'Price List',
+                    icon: Icons.currency_rupee_rounded,
+                    badge: '24 Items',
+                    isActive: p.activeTab == MainTab.priceList,
+                    onTap: () => p.setActiveTab(MainTab.priceList),
+                  ),
+                  _buildNavTab(
+                    label: 'FOB & CIF Calculator',
+                    icon: Icons.calculate_rounded,
+                    badge: 'Pipavav',
+                    isActive: p.activeTab == MainTab.fobCifCalculator,
+                    onTap: () => p.setActiveTab(MainTab.fobCifCalculator),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -464,13 +445,16 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   Widget _buildMarketSegmentBar(BuyerProvider p) {
-    // Only display market filter when browsing buyers or daily work tasks
-    if (p.activeTab != MainTab.allImporters && p.activeTab != MainTab.dailyWorkArea) {
+    // Only show market segment filter on buyer-centric views
+    if (p.activeTab != MainTab.allImporters &&
+        p.activeTab != MainTab.dailyWorkArea &&
+        p.activeTab != MainTab.analytics) {
       return const SizedBox.shrink();
     }
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
@@ -557,48 +541,77 @@ class _DashboardViewState extends State<DashboardView> {
   Widget _buildNavTab({
     required String label,
     required IconData icon,
+    String? badge,
+    Color? badgeColor,
     required bool isActive,
     required VoidCallback onTap,
   }) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(7),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-          decoration: BoxDecoration(
-            color: isActive ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(7),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.18),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1.5),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 14,
-                color: isActive ? const Color(0xFF8B2C69) : Colors.white.withValues(alpha: 0.85),
-              ),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isActive ? const Color(0xFF8B2C69) : Colors.white.withValues(alpha: 0.90),
-                  fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                  fontSize: 12,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          hoverColor: Colors.white.withValues(alpha: 0.12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+            decoration: BoxDecoration(
+              color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.18),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      )
+                    ]
+                  : null,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 15,
+                  color: isActive ? const Color(0xFF701A52) : Colors.white.withValues(alpha: 0.85),
                 ),
-              ),
-            ],
+                const SizedBox(width: 7),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: isActive ? const Color(0xFF701A52) : Colors.white.withValues(alpha: 0.90),
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                    fontSize: 12,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                if (badge != null) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? (badgeColor ?? const Color(0xFFF3E8FF))
+                          : (badgeColor?.withValues(alpha: 0.85) ?? Colors.white.withValues(alpha: 0.20)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      badge,
+                      style: TextStyle(
+                        color: isActive
+                            ? (badgeColor != null ? Colors.white : const Color(0xFF701A52))
+                            : Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),

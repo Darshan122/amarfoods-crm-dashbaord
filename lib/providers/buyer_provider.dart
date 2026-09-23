@@ -383,9 +383,54 @@ class BuyerProvider extends ChangeNotifier {
       final remote = await _apiService.fetchBuyers(forceRefresh: forceRefresh);
 
       if (remote.isNotEmpty) {
-        // Remote (Google Sheet) is the single source of truth.
-        // Deduplicate and ensure clean sequential numbering (1 to N).
-        _buyers = _deduplicateBuyers(remote);
+        // ── CRITICAL FIX: Merge local-only buyers with remote ──────────────
+        // When the no-cors POST to Apps Script doesn't register, locally-added
+        // buyers exist in SharedPreferences but NOT in the Sheet. The old code
+        // wiped them on refresh. Now we detect and restore them.
+        final local = await _loadLocalBuyers();
+
+        List<Buyer> merged = List<Buyer>.from(remote);
+        final List<Buyer> localOnlyBuyers = [];
+
+        for (final localBuyer in local) {
+          bool foundInRemote = false;
+          for (final remoteBuyer in remote) {
+            // Match by srNo (most reliable primary key)
+            if (localBuyer.srNo == remoteBuyer.srNo) {
+              foundInRemote = true;
+              break;
+            }
+            // Match by company name
+            final sameCompany = localBuyer.company.trim().toLowerCase() ==
+                remoteBuyer.company.trim().toLowerCase();
+            // Match by shared email address
+            final localEmails = Buyer.extractEmails(localBuyer.email);
+            final remoteEmails = Buyer.extractEmails(remoteBuyer.email);
+            bool sharedEmail = false;
+            for (final em in localEmails) {
+              if (remoteEmails.contains(em)) {
+                sharedEmail = true;
+                break;
+              }
+            }
+            if (sameCompany || sharedEmail) {
+              foundInRemote = true;
+              break;
+            }
+          }
+          // If this local buyer was NOT found in remote and has a real company name,
+          // it was lost — add it back.
+          if (!foundInRemote && localBuyer.company.trim().isNotEmpty) {
+            localOnlyBuyers.add(localBuyer);
+          }
+        }
+
+        if (localOnlyBuyers.isNotEmpty) {
+          debugPrint('BuyerProvider: ${localOnlyBuyers.length} local-only buyers missing from Sheet — restoring and re-syncing.');
+          merged.addAll(localOnlyBuyers);
+        }
+
+        _buyers = _deduplicateBuyers(merged);
         _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
         for (int i = 0; i < _buyers.length; i++) {
           final seq = i + 1;
@@ -394,6 +439,15 @@ class BuyerProvider extends ChangeNotifier {
               srNo: seq,
               id: Buyer.formatBuyerId(seq),
             );
+          }
+        }
+
+        // Re-sync any recovered buyers back to Google Sheet (retry the failed save)
+        for (final lostBuyer in localOnlyBuyers) {
+          final idx = _buyers.indexWhere((b) =>
+              b.company.trim().toLowerCase() == lostBuyer.company.trim().toLowerCase());
+          if (idx >= 0) {
+            _apiService.saveBuyer(_buyers[idx]);
           }
         }
       } else {
@@ -416,6 +470,15 @@ class BuyerProvider extends ChangeNotifier {
       _rebuildCaches();
     } catch (e) {
       _errorMessage = e.toString();
+      debugPrint('BuyerProvider: loadBuyers error: $e');
+      // On error, at minimum load from local cache so UI data is preserved
+      if (_buyers.isEmpty) {
+        final local = await _loadLocalBuyers();
+        if (local.isNotEmpty) {
+          _buyers = local;
+          _rebuildCaches();
+        }
+      }
     } finally {
       _isLoading = false;
       notifyListeners();

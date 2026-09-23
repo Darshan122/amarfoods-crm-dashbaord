@@ -473,7 +473,7 @@ class ApiService {
 
     if (kIsWeb) {
       try {
-        // 1. Direct POST fetch with text/plain body (no-cors) - standard for web-to-Apps-Script
+        // 1. POST via no-cors fetch (Apps Script standard — fire and forget)
         js.context.callMethod('fetch', [
           targetScriptUrl,
           js.JsObject.jsify({
@@ -484,34 +484,47 @@ class ApiService {
           }),
         ]);
 
-        // 2. Secondary GET via XHR
+        // 2. GET via XHR with full payload — more reliable as it follows redirects
         js.context.callMethod('eval', ['''
           (function() {
             var xhr = new XMLHttpRequest();
             xhr.open("GET", "$getUrl", true);
             xhr.send();
+            // Retry once after 3 seconds if GET fails
+            setTimeout(function() {
+              var xhr2 = new XMLHttpRequest();
+              xhr2.open("GET", "$getUrl", true);
+              xhr2.send();
+            }, 3000);
           })();
         ''']);
-        debugPrint('ApiService: updateBuyerOnSheet sent via POST & GET');
+        debugPrint('ApiService: updateBuyerOnSheet sent via POST + GET with retry for ${buyer.company}');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web updateBuyer error: $e');
       }
     }
 
-    try {
-      final response = await http.post(
-        Uri.parse(targetScriptUrl),
-        headers: {'Content-Type': 'text/plain;charset=utf-8'},
-        body: postBody,
-      ).timeout(const Duration(seconds: 8));
+    // Non-web: HTTP POST with retry
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        final response = await http.post(
+          Uri.parse(targetScriptUrl),
+          headers: {'Content-Type': 'text/plain;charset=utf-8'},
+          body: postBody,
+        ).timeout(const Duration(seconds: 12));
 
-      if (response.statusCode == 200 || response.statusCode == 302) {
-        _cachedBuyers = null;
-        return true;
+        if (response.statusCode == 200 || response.statusCode == 302) {
+          _cachedBuyers = null;
+          debugPrint('ApiService: updateBuyerOnSheet success on attempt $attempt for ${buyer.company}');
+          return true;
+        }
+      } catch (e) {
+        debugPrint('ApiService: HTTP POST updateBuyer attempt $attempt failed: $e');
+        if (attempt < 3) {
+          await Future.delayed(Duration(seconds: attempt * 2));
+        }
       }
-    } catch (e) {
-      debugPrint('ApiService: HTTP POST updateBuyer failed: $e');
     }
     return false;
   }

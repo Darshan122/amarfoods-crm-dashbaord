@@ -148,7 +148,9 @@ class PricePdfService {
             ),
             pw.TextSpan(
               text:
-                  'Due to daily raw material market fluctuations, all prices are quoted on a daily spot basis (Ex-Factory Mahuva in INR / Rs. per kg) and are subject to final reconfirmation at the time of order booking.',
+                  'Prices are on a daily spot basis (Ex-Factory Mahuva, INR/kg) and subject to reconfirmation at order booking. '
+                  'Listed prices are for Export Quality (Premium Grade \u2014 Optical/Machine Sorted). '
+                  'All other grades (FAQ, Commercial, Custom Specs) available on request.',
               style: pw.TextStyle(
                 fontSize: 8.5,
                 fontWeight: pw.FontWeight.bold,
@@ -273,7 +275,7 @@ class PricePdfService {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _termItem('Quality Standards', 'Quoted prices are for 100% Export Quality (Optical/Machine Sorted). Commercial/Unsorted grades also available on request.'),
+                    _termItem('Quality Standards', 'Export Quality (Premium Grade — Optical/Machine Sorted). FAQ, Commercial & Custom Spec grades available on request.'),
                     _termItem('Dispatch & Transport', 'Available across all India or Mundra/Pipavav seaport on actual freight basis'),
                   ],
                 ),

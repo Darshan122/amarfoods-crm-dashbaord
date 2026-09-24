@@ -1094,20 +1094,54 @@ class BuyerProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final remotePrices = await _apiService.fetchPrices();
+
       if (remotePrices.isNotEmpty) {
-        _prices = remotePrices.map((p) {
-          if (p.currency.isEmpty || p.currency.contains('USD')) {
-            return p.copyWith(currency: '₹ / kg');
+        // ── CRITICAL FIX: Merge remote with local ─────────────────────────────
+        // Remote has the Sheet's saved prices. But local may have newer edits
+        // that the no-cors POST never delivered. Prefer local price for any
+        // product that exists in both (local = user's latest edit).
+        final localPrefs = await SharedPreferences.getInstance();
+        final String? localJson = localPrefs.getString(_localPricesKey);
+        List<ProductPrice> localPrices = [];
+        if (localJson != null && localJson.isNotEmpty) {
+          try {
+            final List<dynamic> decoded = jsonDecode(localJson);
+            localPrices = decoded.map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+          } catch (_) {}
+        }
+
+        // Build merged list: start with remote, override with local where product IDs match
+        final Map<String, ProductPrice> merged = {};
+        for (final rp in remotePrices) {
+          merged[rp.id] = rp.currency.isEmpty || rp.currency.contains('USD')
+              ? rp.copyWith(currency: '₹ / kg')
+              : rp;
+        }
+        // Local overrides remote for same product (user's edit takes priority)
+        for (final lp in localPrices) {
+          if (merged.containsKey(lp.id)) {
+            // Only override if local price differs from remote (user actually changed it)
+            final rp = merged[lp.id]!;
+            if (lp.currentPrice != rp.currentPrice || lp.grade != rp.grade || lp.packing != rp.packing) {
+              merged[lp.id] = lp;
+              // Re-sync this local change back to the Sheet
+              _apiService.saveProductPrice(lp);
+              debugPrint('BuyerProvider: Re-syncing locally-edited price for ${lp.name} to Sheet.');
+            }
           }
-          return p;
-        }).toList();
+        }
+        _prices = merged.values.toList();
       } else {
+        // Remote returned empty — use local cache (never fall back to hardcoded defaults
+        // unless local is also empty for the first time).
         final prefs = await SharedPreferences.getInstance();
         final String? jsonStr = prefs.getString(_localPricesKey);
         if (jsonStr != null && jsonStr.isNotEmpty) {
           final List<dynamic> decoded = jsonDecode(jsonStr);
           _prices = decoded.map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+          debugPrint('BuyerProvider: Remote prices empty — loaded ${_prices.length} prices from local cache.');
         } else {
+          // Absolute first run — load defaults and push to Sheet
           _prices = ApiService.getDefaultPrices();
           _apiService.saveWeeklyPrices(_prices, weekLabel: 'Daily Spot Rate');
         }
@@ -1115,8 +1149,20 @@ class BuyerProvider extends ChangeNotifier {
       await _saveLocalPrices();
     } catch (e) {
       debugPrint('BuyerProvider: Error loading prices: $e');
+      // On error always preserve existing in-memory prices or load from local cache
       if (_prices.isEmpty) {
-        _prices = ApiService.getDefaultPrices();
+        final prefs = await SharedPreferences.getInstance();
+        final String? jsonStr = prefs.getString(_localPricesKey);
+        if (jsonStr != null && jsonStr.isNotEmpty) {
+          try {
+            final List<dynamic> decoded = jsonDecode(jsonStr);
+            _prices = decoded.map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+          } catch (_) {
+            _prices = ApiService.getDefaultPrices();
+          }
+        } else {
+          _prices = ApiService.getDefaultPrices();
+        }
       }
     } finally {
       _isLoadingPrices = false;

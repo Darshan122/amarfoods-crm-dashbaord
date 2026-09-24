@@ -709,7 +709,7 @@ class ApiService {
       final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
       final response = await http.get(
         Uri.parse('$targetScriptUrl?action=getPrices&_t=$timestamp'),
-      ).timeout(const Duration(seconds: 6));
+      ).timeout(const Duration(seconds: 12)); // increased from 6s — Apps Script can be slow
 
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
@@ -733,7 +733,9 @@ class ApiService {
     } catch (e) {
       debugPrint('ApiService: fetchPrices exception: $e');
     }
-    return getDefaultPrices();
+    // CRITICAL FIX: Return EMPTY list (not defaults!) so loadPrices()
+    // falls back to local SharedPreferences cache instead of wiping user prices.
+    return [];
   }
 
   /// Save or update a single product price in Google Sheets (PriceList tab + PriceHistory upsert)
@@ -758,6 +760,7 @@ class ApiService {
 
     if (kIsWeb) {
       try {
+        // 1. POST via no-cors (fire and forget)
         js.context.callMethod('fetch', [
           targetScriptUrl,
           js.JsObject.jsify({
@@ -768,31 +771,41 @@ class ApiService {
           }),
         ]);
 
+        // 2. GET via XHR with retry after 3s (more reliable)
         js.context.callMethod('eval', ['''
           (function() {
             var xhr = new XMLHttpRequest();
             xhr.open("GET", "$getUrl", true);
             xhr.send();
+            setTimeout(function() {
+              var xhr2 = new XMLHttpRequest();
+              xhr2.open("GET", "$getUrl", true);
+              xhr2.send();
+            }, 3000);
           })();
         ''']);
-        debugPrint('ApiService: saveProductPrice(${price.id}) sent via POST & GET');
+        debugPrint('ApiService: saveProductPrice(${price.id}) sent via POST + GET with retry');
         return true;
       } catch (e) {
         debugPrint('ApiService: Web saveProductPrice error: $e');
       }
     }
 
-    try {
-      final response = await http.post(
-        Uri.parse(targetScriptUrl),
-        headers: {'Content-Type': 'text/plain;charset=utf-8'},
-        body: payloadJson,
-      ).timeout(const Duration(seconds: 8));
-      if (response.statusCode == 200 || response.statusCode == 302) return true;
-    } catch (e) {
-      debugPrint('ApiService: HTTP saveProductPrice failed: $e');
+    // Non-web: HTTP POST with retry
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        final response = await http.post(
+          Uri.parse(targetScriptUrl),
+          headers: {'Content-Type': 'text/plain;charset=utf-8'},
+          body: payloadJson,
+        ).timeout(const Duration(seconds: 12));
+        if (response.statusCode == 200 || response.statusCode == 302) return true;
+      } catch (e) {
+        debugPrint('ApiService: HTTP saveProductPrice attempt $attempt failed: $e');
+        if (attempt < 3) await Future.delayed(Duration(seconds: attempt * 2));
+      }
     }
-    return true;
+    return true; // Optimistic — local state already saved
   }
 
   /// Delete a product from Google Sheet PriceList tab by ID

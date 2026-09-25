@@ -252,22 +252,44 @@ class _DashboardViewState extends State<DashboardView> {
 
                 // Action Buttons: Sync / Refresh Button
                 Tooltip(
-                  message: 'Refresh & Sync all data from Google Sheet',
+                  message: 'Push ALL local data to Sheet, then refresh',
                   child: InkWell(
-                    onTap: p.isLoading
+                    onTap: p.isLoading || p.isForceSyncing
                         ? null
-                        : () {
+                        : () async {
+                            // Step 1: Push all local buyers to Sheet first
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    const SizedBox(
+                                      width: 14, height: 14,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text('Pushing ${p.buyers.length} buyers to Sheet...'),
+                                  ],
+                                ),
+                                duration: const Duration(seconds: 4),
+                                backgroundColor: const Color(0xFF8B2C69),
+                              ),
+                            );
+                            await p.forcePushAllToSheet();
+                            // Step 2: Refresh from Sheet
+                            await Future.delayed(const Duration(seconds: 2));
                             p.loadBuyers();
                             p.loadExpos();
                             p.loadPrices();
                             p.loadPriceHistory();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Refreshing all data from Google Sheet...'),
-                                duration: Duration(seconds: 2),
-                                backgroundColor: Color(0xFF0F766E),
-                              ),
-                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('✅ All data synced to Google Sheet successfully!'),
+                                  duration: Duration(seconds: 3),
+                                  backgroundColor: Color(0xFF009647),
+                                ),
+                              );
+                            }
                           },
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
@@ -283,7 +305,7 @@ class _DashboardViewState extends State<DashboardView> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          p.isLoading
+                          p.isLoading || p.isForceSyncing
                               ? const SizedBox(
                                   width: 14,
                                   height: 14,
@@ -292,9 +314,11 @@ class _DashboardViewState extends State<DashboardView> {
                               : const Icon(Icons.sync_rounded, color: Colors.white, size: 16),
                           if (!isNarrow) ...[
                             const SizedBox(width: 6),
-                            const Text(
-                              'Sync Sheet',
-                              style: TextStyle(
+                            Text(
+                              p.isForceSyncing
+                                  ? 'Syncing ${p.forceSyncProgress}/${p.forceSyncTotal}...'
+                                  : 'Sync Sheet',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,

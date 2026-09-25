@@ -1054,6 +1054,49 @@ class BuyerProvider extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------------------
+  // FORCE PUSH ALL LOCAL BUYERS TO GOOGLE SHEET
+  // ---------------------------------------------------------------------------
+  bool _isForceSyncing = false;
+  int _forceSyncProgress = 0;
+  int _forceSyncTotal = 0;
+
+  bool get isForceSyncing => _isForceSyncing;
+  int get forceSyncProgress => _forceSyncProgress;
+  int get forceSyncTotal => _forceSyncTotal;
+
+  /// Pushes ALL local buyers to Google Sheet one by one.
+  /// Use this to recover buyers that are in local storage but not in the Sheet.
+  Future<int> forcePushAllToSheet() async {
+    if (_isForceSyncing) return 0;
+    _isForceSyncing = true;
+    _forceSyncProgress = 0;
+    _forceSyncTotal = _buyers.length;
+    notifyListeners();
+
+    int successCount = 0;
+    for (int i = 0; i < _buyers.length; i++) {
+      final buyer = _buyers[i];
+      try {
+        final ok = await _apiService.saveBuyer(buyer);
+        if (ok) successCount++;
+        _forceSyncProgress = i + 1;
+        notifyListeners();
+        // Small delay to avoid overloading Apps Script
+        await Future.delayed(const Duration(milliseconds: 300));
+      } catch (e) {
+        debugPrint('BuyerProvider: forcePushAllToSheet error for ${buyer.company}: $e');
+      }
+    }
+
+    _isForceSyncing = false;
+    _forceSyncProgress = 0;
+    _forceSyncTotal = 0;
+    notifyListeners();
+    debugPrint('BuyerProvider: forcePushAllToSheet complete — $successCount/${_buyers.length} pushed to Sheet.');
+    return successCount;
+  }
+
+  // ---------------------------------------------------------------------------
   // PRODUCT PRICE LIST & HISTORY STATE & METHODS
   // ---------------------------------------------------------------------------
   static const String _localPricesKey = 'amar_crm_local_prices';

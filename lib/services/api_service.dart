@@ -187,6 +187,14 @@ class ApiService {
       String firstEmailDate = row.length > offset + 7 ? row[offset + 7].replaceAll('"', '').trim() : '';
       String followUpDate = row.length > offset + 8 ? row[offset + 8].replaceAll('"', '').trim() : '';
       String clientReply = row.length > offset + 9 ? row[offset + 9].replaceAll('"', '').trim() : 'Pending';
+      // Columns 10–15: LastEmailDate, FollowupCount, Status, NextAction, Notes, MarketType
+      String lastEmailDate = row.length > offset + 10 ? row[offset + 10].replaceAll('"', '').trim() : '';
+      int followupCount = int.tryParse(row.length > offset + 11 ? row[offset + 11].replaceAll('"', '').trim() : '0') ?? 0;
+      String csvStatus = row.length > offset + 12 ? row[offset + 12].replaceAll('"', '').trim() : '';
+      String nextAction = row.length > offset + 13 ? row[offset + 13].replaceAll('"', '').trim() : 'Follow-Up';
+      // CRITICAL: Read Notes column (Col 14) — contains LinkedIn contacts in <<<CONTACTS_START>>> format
+      String notes = row.length > offset + 14 ? row[offset + 14].replaceAll('"', '').trim() : '';
+      String csvMarketType = row.length > offset + 15 ? row[offset + 15].replaceAll('"', '').trim() : '';
 
       String website = cleanWebsiteUrl(rawWebsite);
       String email = cleanEmailStr(rawEmail);
@@ -224,14 +232,8 @@ class ApiService {
       }
 
       String marketType = 'International';
-      if (row.length > offset + 10) {
-        for (int c = offset + 10; c < row.length; c++) {
-          final val = row[c].replaceAll('"', '').trim();
-          if (val.toLowerCase() == 'domestic' || val.toLowerCase() == 'dom') {
-            marketType = 'Domestic';
-            break;
-          }
-        }
+      if (csvMarketType.isNotEmpty) {
+        marketType = csvMarketType.toLowerCase().contains('dom') ? 'Domestic' : 'International';
       }
 
       list.add(Buyer(
@@ -246,11 +248,11 @@ class ApiService {
         firstEmailDate: firstEmailDate,
         nextDueDate: followUpDate,
         clientReply: clientReply,
-        lastEmailDate: firstEmailDate,
-        notes: '',
-        status: status,
-        nextAction: 'Follow-Up',
-        followupCount: 0,
+        lastEmailDate: lastEmailDate.isNotEmpty ? lastEmailDate : firstEmailDate,
+        notes: notes, // FIXED: was hardcoded '' — now reads actual Notes column (LinkedIn contacts)
+        status: csvStatus.isNotEmpty ? csvStatus : status,
+        nextAction: nextAction.isNotEmpty ? nextAction : 'Follow-Up',
+        followupCount: followupCount,
         marketType: marketType,
       ));
 

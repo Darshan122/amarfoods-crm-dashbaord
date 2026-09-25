@@ -1073,6 +1073,13 @@ class BuyerProvider extends ChangeNotifier {
     _forceSyncTotal = _buyers.length;
     notifyListeners();
 
+    // 1. Send all in batch first via POST
+    try {
+      await _apiService.batchUpdateBuyersOnSheet(_buyers);
+    } catch (e) {
+      debugPrint('BuyerProvider: batchUpdateBuyersOnSheet error: $e');
+    }
+
     int successCount = 0;
     for (int i = 0; i < _buyers.length; i++) {
       final buyer = _buyers[i];
@@ -1081,8 +1088,8 @@ class BuyerProvider extends ChangeNotifier {
         if (ok) successCount++;
         _forceSyncProgress = i + 1;
         notifyListeners();
-        // Small delay to avoid overloading Apps Script
-        await Future.delayed(const Duration(milliseconds: 300));
+        // Delay to allow Apps Script to process each record cleanly
+        await Future.delayed(const Duration(milliseconds: 150));
       } catch (e) {
         debugPrint('BuyerProvider: forcePushAllToSheet error for ${buyer.company}: $e');
       }

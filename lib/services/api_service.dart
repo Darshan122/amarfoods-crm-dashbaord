@@ -8,7 +8,7 @@ import '../models/product_price.dart';
 
 class ApiService {
   static const String defaultScriptUrl =
-      'https://script.google.com/macros/s/AKfycbyQgrGPICSqOlKPjc-lDN8o7wL8L-mqZ2W487XApba9lEt0InWNcVX9Z4RPUe9h3ljS/exec';
+      'https://script.google.com/macros/s/AKfycbyOFxeG3sZp7Ccs8jlhfJ2osgQuQA2dHQ2pRZvNel7fL9ol82clds3fpKkRr1aNmP6C/exec';
 
   static const String sheetGvizCsvUrl =
       'https://docs.google.com/spreadsheets/d/1jtqUJxkvQoyxTccC1gOUv1WejJigm7DMX9P66OyrhuA/gviz/tq?tqx=out:csv&sheet=Sheet1';
@@ -20,8 +20,11 @@ class ApiService {
   bool get isConnected => _isConnected;
 
   void updateUrl(String url) {
-    if (url.trim().isNotEmpty) {
-      _scriptUrl = url.trim();
+    final trimmed = url.trim();
+    if (trimmed.isNotEmpty && !trimmed.contains('AKfycbyQgr')) {
+      _scriptUrl = trimmed;
+    } else {
+      _scriptUrl = defaultScriptUrl;
     }
   }
 
@@ -536,17 +539,34 @@ class ApiService {
         ? customScriptUrl.trim()
         : _scriptUrl;
 
-    try {
-      final body = json.encode({
-        'action': 'batchUpdateBuyers',
-        'buyers': buyers.map((b) => b.toJson()).toList(),
-      });
+    final body = json.encode({
+      'action': 'batchUpdateBuyers',
+      'buyers': buyers.map((b) => b.toJson()).toList(),
+    });
 
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('fetch', [
+          targetScriptUrl,
+          js.JsObject.jsify({
+            'method': 'POST',
+            'mode': 'no-cors',
+            'headers': {'Content-Type': 'text/plain;charset=utf-8'},
+            'body': body,
+          }),
+        ]);
+        return true;
+      } catch (e) {
+        debugPrint('Web batchUpdateBuyers error: $e');
+      }
+    }
+
+    try {
       final response = await http.post(
         Uri.parse(targetScriptUrl),
         headers: {'Content-Type': 'text/plain;charset=utf-8'},
         body: body,
-      ).timeout(const Duration(seconds: 12));
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200 || response.statusCode == 302) {
         return true;

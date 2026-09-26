@@ -8,7 +8,7 @@ class TemplateService extends ChangeNotifier {
   factory TemplateService() => _instance;
   TemplateService._internal();
 
-  static const String _storageKey = 'amar_crm_email_templates_v4';
+  static const String _storageKey = 'amar_crm_email_templates_v5';
   List<EmailTemplate> _templates = [];
 
   List<EmailTemplate> get templates => List.unmodifiable(_templates);
@@ -55,191 +55,211 @@ class TemplateService extends ChangeNotifier {
   static List<EmailTemplate> getDefaultTemplates() {
     return [
       // ═══════════════════════════════════════════════════════════════════════
-      // 1. EMAIL OUTREACH TEMPLATES
+      // 1. EMAIL OUTREACH TEMPLATES — Relationship-first, research-backed
+      //    Rule: Build the relationship → then naturally mention products.
+      //    Keep under 120 words. No attachments. One clear question at end.
       // ═══════════════════════════════════════════════════════════════════════
+
+      // ── EXPO FOLLOW-UP ──────────────────────────────────────────────────────
       EmailTemplate(
         id: 'tpl_expo_first_email',
         name: 'Expo First Email (Stall Visit Follow-up)',
         type: 'expo_first_email',
         channel: 'email',
-        subject: 'Pleasure meeting you at {expo_name} | Amar Foods — Product Catalog & Collaboration',
+        subject: 'Great meeting you at {expo_name} — Amar Foods',
         body: '''Dear {contact_person},
 
-Greetings from Amar Foods!
+It was a genuine pleasure speaking with you at {expo_name}. I came away from our conversation with a much better sense of what {company} looks for in its ingredient suppliers.
 
-I hope this message finds you well.
+As promised, I am following up. Our range covers dehydrated onion (white, red & pink), garlic, Indian spices like cumin and turmeric, crispy fried onion, ginger, moringa, sesame seeds, and more — all manufactured and exported directly from our facility in Mahuva, Gujarat.
 
-It was a real pleasure meeting you at {expo_name} on {expo_date}, and I would like to express my sincere gratitude for the engaging discussion we had regarding potential collaborations and business opportunities in the industry.
+There is absolutely no rush. Whenever you are ready — whether for a specific inquiry, pricing, or lab samples — just reach out and I will arrange everything promptly.
 
-As we discussed regarding our premium quality Dehydrated Food Products — including Dehydrated Onion (Flakes, Minced, Chopped, Powder), Dehydrated Garlic (Granules, Powder), and Agro Spices — we are enthusiastic about exploring ways to work together and cater to {company}'s requirements.
+Looking forward to staying in touch.
 
-As discussed at the event, I have attached our latest Product Catalog & Company Profile for your review.
-
-Please let me know if you require any additional information, product specifications, or custom pricing (FOB / CIF). We would also be very glad to dispatch product samples for your quality evaluation. I look forward to your response and hope to continue our conversation soon.
-
-Thank you once again for your valuable time and insights. We truly believe in exceptional product quality, consistency, and long-term customer assurance.
-
-Thanks & Regards,
-
+Warm regards,
 Darshan Zalavadiya
-Export Sales Executive
-Amar Foods | India
-Mob / WhatsApp: +91 7284088737
-Email: export@amarfoods.in
-Website: https://amarfoods.in/''',
+Export Sales | Amar Foods, Mahuva — India
+📞 WhatsApp: +91 7284088737
+✉ export@amarfoods.in
+🌐 https://amarfoods.in''',
         isDefault: true,
       ),
+
+      // ── FIRST COLD EMAIL ────────────────────────────────────────────────────
       EmailTemplate(
         id: 'tpl_first_email',
-        name: 'First Email (Initial Outreach)',
+        name: 'First Email (Cold Introduction)',
         type: 'first_email',
         channel: 'email',
-        subject: 'Product Inquiry & Introduction - Amar Foods ({company})',
-        body: '''Dear Purchasing Department / Trade Manager ({company}),
+        subject: 'A question about ingredient sourcing at {company}',
+        body: '''Dear {contact_person},
 
-Greetings from Amar Foods!
+I hope you are having a good week.
 
-We specialize in exporting high-quality Dehydrated Onion, Garlic, and Food Products. We would love to discuss potential supply and partnership opportunities with {company}.
+I came across {company} while researching importers in your region and was genuinely impressed by your work. That is what prompted me to reach out.
 
-Could you please share your current purchasing requirements or connect us with your procurement manager?
+We are Amar Foods — a direct manufacturer and exporter based in Mahuva, Gujarat, India. We produce a wide range of dehydrated vegetables, Indian spices, crispy fried onion, sesame seeds, and herbal powders. Our facility is FSSAI, APEDA & ISO 22000 certified, and we supply food processors and spice blenders across Europe, the Middle East, and Southeast Asia.
+
+I would love to understand {company}'s sourcing priorities — even if it is just to be on your list for the future.
+
+Would you be open to a brief introduction?
 
 Warm regards,
-
 Darshan Zalavadiya
-Export Sales Executive
-Amar Foods | India
-📞 Phone / WhatsApp: +91 7284088737
-📧 Email: export@amarfoods.in
-🌐 Website: https://amarfoods.in/''',
+Export Sales | Amar Foods, Mahuva — India
+📞 WhatsApp: +91 7284088737
+✉ export@amarfoods.in
+🌐 https://amarfoods.in''',
         isDefault: true,
       ),
+
+      // ── FOLLOW-UP 1 — Soft Check-In (Day 4–5) ───────────────────────────────
       EmailTemplate(
         id: 'tpl_followup_1',
-        name: 'Follow-Up 1 (First Reminder)',
+        name: 'Follow-Up 1 (Soft Check-In, Day 4–5)',
         type: 'followup_1',
         channel: 'email',
-        subject: 'Following Up: Amar Foods Inquiry - {company} (Follow-Up #1)',
-        body: '''Dear Purchasing Team ({company}),
+        subject: 'Re: Ingredient sourcing at {company}',
+        body: '''Hi {contact_person},
 
-I hope this email finds you well.
+I know how quickly inboxes fill up — just wanted to make sure my previous note did not get buried.
 
-I am following up on our previous communication regarding Dehydrated Onion & Garlic supply from Amar Foods.
+No pressure at all. If the timing is not right for {company} right now, I completely understand and am happy to reconnect whenever suits you better.
 
-Please let us know if you have any questions or require updated product specifications, catalog, or pricing for {company}.
+That said, if there is anything from our range — dehydrated vegetables, Indian spices, or specialty items — where a quick spec sheet or current pricing would be helpful, just let me know.
 
-Warm regards,
+Hope you have a great week ahead.
 
+Best regards,
 Darshan Zalavadiya
-Export Sales Executive
-Amar Foods | India
-📞 Phone / WhatsApp: +91 7284088737
-📧 Email: export@amarfoods.in
-🌐 Website: https://amarfoods.in/''',
+Amar Foods | +91 7284088737
+https://amarfoods.in''',
         isDefault: true,
       ),
+
+      // ── FOLLOW-UP 2 — Free Sample Offer (Day 9) ─────────────────────────────
       EmailTemplate(
         id: 'tpl_followup_2',
-        name: 'Follow-Up 2 (Catalog & Pricing)',
+        name: 'Follow-Up 2 (Free Sample Offer, Day 9)',
         type: 'followup_2',
         channel: 'email',
-        subject: 'Catalog & Price Request: Amar Foods Export - {company} (Follow-Up #2)',
-        body: '''Dear Purchasing Team ({company}),
+        subject: 'Complimentary sample kit for {company}\'s quality team?',
+        body: '''Hi {contact_person},
 
-I am reaching out once again regarding our high-grade Dehydrated Onion & Garlic products.
+I wanted to reach out with something that may be genuinely useful.
 
-We would be happy to share our latest product catalog and custom FOB/CIF pricing tailored for {company}'s requirements.
+We regularly send complimentary sample kits to new trade partners — a curated selection from our range (dehydrated onion, garlic, Indian spices such as cumin or turmeric, sesame seeds, or any specific item of interest), along with full COA lab reports and specification sheets for your quality team's evaluation.
 
-Looking forward to your feedback.
+It is a completely no-obligation way to experience the quality we stand behind — before any conversation about pricing or volumes.
 
-Warm regards,
+Would a sample kit be useful for {company}? If yes, simply share your preferred delivery address and I will arrange the shipment right away.
 
+Best regards,
 Darshan Zalavadiya
-Export Sales Executive
-Amar Foods | India
-📞 Phone / WhatsApp: +91 7284088737
-📧 Email: export@amarfoods.in
-🌐 Website: https://amarfoods.in/''',
+Amar Foods, Mahuva — India
+📞 +91 7284088737 (WhatsApp)
+🌐 https://amarfoods.in | Products: https://amarfoods.in/#/products''',
         isDefault: true,
       ),
+
+      // ── FOLLOW-UP 3+ — Graceful Exit (Day 18+) ──────────────────────────────
       EmailTemplate(
         id: 'tpl_followup_3',
-        name: 'Follow-Up 3+ (Re-engagement)',
+        name: 'Follow-Up 3+ (Graceful Exit, Day 18+)',
         type: 'followup_3',
         channel: 'email',
-        subject: 'Re-engagement: Dehydrated Spice Supply for {company} (Follow-Up #{followup_count})',
-        body: '''Dear Trade & Purchasing Team ({company}),
+        subject: 'Keeping in touch — Amar Foods',
+        body: '''Hi {contact_person},
 
-Checking in to see if {company} has any upcoming requirements for Dehydrated Onion Flakes, Powder, or Garlic Granules.
+I understand that sourcing timelines and priorities differ for every company, and I respect that completely.
 
-We offer premium export quality with competitive bulk pricing. Please let us know if we can assist with a sample order.
+I will not keep filling your inbox — but I did want to leave you with our full product catalog (https://amarfoods.in/#/products) in case anything is relevant down the line. Our range includes dehydrated alliums, Indian spices, crispy fried onion, pure ginger, moringa, sesame seeds, and much more — all exported directly from our manufacturing facility in Mahuva, India.
+
+Whenever {company} has a new buying cycle or a specific ingredient need, please do not hesitate to reach out. I am always available on WhatsApp (+91 7284088737) for a quick conversation.
+
+Wishing you the very best.
 
 Warm regards,
-
 Darshan Zalavadiya
-Export Sales Executive
-Amar Foods | India
-📞 Phone / WhatsApp: +91 7284088737
-📧 Email: export@amarfoods.in
-🌐 Website: https://amarfoods.in/''',
+Export Sales | Amar Foods
+🌐 https://amarfoods.in''',
         isDefault: true,
       ),
 
       // ═══════════════════════════════════════════════════════════════════════
-      // 2. LINKEDIN OUTREACH TEMPLATES (100% Free Smart-Assisted Funnel)
+      // 2. LINKEDIN OUTREACH TEMPLATES
+      //    Rule: Open the door, don't close a sale.
+      //    No product pitch in connection request.
+      //    Research: Personalized notes = 3x higher acceptance rate.
       // ═══════════════════════════════════════════════════════════════════════
+
+      // ── CONNECTION REQUEST (<300 chars) ──────────────────────────────────────
       EmailTemplate(
         id: 'tpl_linkedin_connect',
-        name: 'LinkedIn: Connection Request Note (<300 chars)',
+        name: 'LinkedIn: Connection Request Note (< 300 chars)',
         type: 'linkedin_connect',
         channel: 'linkedin',
         subject: 'Connection Request Note (< 300 chars)',
-        body: 'Hi {contact_person}, noticed your work in food sourcing at {company}. We manufacture & export optical-sorted dehydrated onion, garlic & spices from Mahuva, India. Would love to connect and follow your updates!',
+        body: 'Hi {contact_person}, I follow {company}\'s work in the food space with interest. We are a dehydrated vegetable & Indian spice manufacturer based in Mahuva, India. Would love to connect and follow your updates!',
         isDefault: true,
       ),
+
+      // ── WELCOME (POST-ACCEPTANCE) ────────────────────────────────────────────
       EmailTemplate(
         id: 'tpl_linkedin_welcome',
-        name: 'LinkedIn: First Intro (Post-Acceptance)',
+        name: 'LinkedIn: Welcome Message (Post-Acceptance)',
         type: 'linkedin_welcome',
         channel: 'linkedin',
-        subject: 'Welcome & Factory Credentials',
+        subject: 'Welcome & Brief Introduction',
         body: '''Hi {contact_person}, thanks for connecting!
 
-Briefly introducing Amar Foods: we are a direct manufacturer & exporter of premium Dehydrated White, Red, Pink Onion & Garlic (Flakes, Minced, Chopped, Granules, Powder) as well as Spices & Vegetable Powders from Gujarat, India.
+A brief intro: Amar Foods is a direct manufacturer and exporter based in Mahuva, Gujarat. We produce dehydrated onion (white, red & pink), garlic, Indian spices (cumin, turmeric, coriander), crispy fried onion, sesame seeds, ginger, moringa, and more — supplying food processors and spice blenders globally.
 
-We supply global food processors and spice blenders with optical-sorted, low-micro quality (FSSC 22000, Kosher, Halal). Are you currently sourcing dehydrated alliums or spices for {company}? Happy to share our product catalog & spec sheets.''',
+All products are FSSAI, APEDA & ISO 22000 certified, with COA documentation per batch.
+
+Is {company} currently sourcing any of these ingredients? Happy to share our catalog or arrange sample kits — no pressure at all.''',
         isDefault: true,
       ),
+
+      // ── FOLLOW-UP 1 — Free Sample (Day 4) ───────────────────────────────────
       EmailTemplate(
         id: 'tpl_linkedin_followup_1',
-        name: 'LinkedIn: Follow-Up 1 (Free Lab Samples)',
+        name: 'LinkedIn: Follow-Up 1 (Free Sample Offer, Day 4)',
         type: 'linkedin_followup_1',
         channel: 'linkedin',
         subject: 'Complimentary Sample Offer (Day 4)',
-        body: '''Hi {contact_person}, following up on my previous note. We are currently scheduling export dispatches and offering complimentary sample kits (Flakes, Minced, Granules, Powder) along with COA / lab specs for your QA evaluation.
+        body: '''Hi {contact_person}, following up on my previous note.
 
-Could we send a sample box to {company} to test our aroma and optical purity?''',
+We are currently scheduling international sample dispatches. Would your quality team at {company} find it useful to receive a complimentary evaluation pack of our dehydrated vegetables or Indian spices — along with COA lab reports?
+
+Happy to arrange it if there is any interest.''',
         isDefault: true,
       ),
+
+      // ── FOLLOW-UP 2 — Market Update & WhatsApp (Day 10) ─────────────────────
       EmailTemplate(
         id: 'tpl_linkedin_followup_2',
-        name: 'LinkedIn: Follow-Up 2 (Spot Rates & WhatsApp)',
+        name: 'LinkedIn: Follow-Up 2 (Market Update + WhatsApp, Day 10)',
         type: 'linkedin_followup_2',
         channel: 'linkedin',
-        subject: 'Fresh Crop Spot Rates & WhatsApp (Day 10)',
-        body: '''Hi {contact_person}, fresh crop spot rates in India are favorable this week. We have fresh batches of Optical Sorted Onion Flakes and Garlic Granules ready for export packaging.
+        subject: 'Fresh Crop Update & WhatsApp (Day 10)',
+        body: '''Hi {contact_person}, our new crop processing cycle is currently active in Mahuva, and spot rates for dehydrated onion and garlic are particularly competitive this season.
 
-If you're on WhatsApp for faster communication, feel free to reach me at +91 7284088737 or let me know yours. Wishing you a productive week ahead!''',
+If you prefer quick communication over WhatsApp for pricing or availability updates, feel free to reach me at +91 7284088737. Wishing you a productive week!''',
         isDefault: true,
       ),
+
+      // ── FOLLOW-UP 3 — Full Catalog & Graceful Close (Day 20) ────────────────
       EmailTemplate(
         id: 'tpl_linkedin_followup_3',
-        name: 'LinkedIn: Follow-Up 3 (47 Products & HSN Codes)',
+        name: 'LinkedIn: Follow-Up 3 (Full Catalog + Graceful Close, Day 20)',
         type: 'linkedin_followup_3',
         channel: 'linkedin',
-        subject: 'Official Product Range & HSN Directory (Day 20)',
-        body: '''Hi {contact_person}, wanted to share our full export product directory (47 items including Dehydrated White/Red/Pink Onions - HSN 07122000, Garlic - HSN 07129030/40, Pure Ginger, Turmeric, Cumin, and Vegetable Powders).
+        subject: 'Full Product Catalog & Staying in Touch (Day 20)',
+        body: '''Hi {contact_person}, sharing our full export product catalog (https://amarfoods.in/#/products) for your reference — 47+ items including dehydrated alliums, Indian spices, crispy fried onion, sesame seeds, pure ginger, and herbal powders.
 
-Let me know if {company} has any upcoming import inquiries or tenders we can quote on.''',
+Do reach out whenever {company} has a new ingredient requirement or buying cycle. Always happy to assist!''',
         isDefault: true,
       ),
     ];

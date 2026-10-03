@@ -747,34 +747,44 @@ function getAllExpos() {
   var lastRow = sheet.getLastRow();
   if (lastRow <= 1) return [];
 
-  // ── AUTO-HEAL: Repair any existing #ERROR! cells in Phone column (col 11 = K)
-  // Root cause: '+91 xxxx' was typed/saved and Sheets treated '+' as a formula
-  // operator. getFormulas() reveals the stored formula text; if it starts with
-  // '+' we know the cell is broken. We rewrite it as plain text with a leading
-  // apostrophe which forces Sheets to treat it as a string permanently.
+  // ── SAFE AUTO-HEAL: Only fix cells that are ACTUALLY showing a Sheets error.
+  // Previous bug: checking getFormulas() for '+' prefix wrongly triggered on
+  // correctly stored +91 numbers (whose formula text can also start with '+').
+  // Fix: check getDisplayValues() FIRST — only attempt repair if the cell
+  // displays '#ERROR!' or similar. Then read formula to recover the real number.
   var phoneColRange = sheet.getRange(2, 11, lastRow - 1, 1);
-  var phoneFormulas  = phoneColRange.getFormulas();
-  var phoneCellsFixed = 0;
-  for (var f = 0; f < phoneFormulas.length; f++) {
-    var fml = String(phoneFormulas[f][0] || '').trim();
-    // GAS stores '+91...' formula WITHOUT the leading '=', so it looks like '+91 ...'
-    if (fml.length > 0 && (fml.charAt(0) === '+' || fml.indexOf('=+') === 0)) {
-      // Reconstruct the real phone number from the formula text
-      var realPhone = fml.replace(/^=\+?/, '+').replace(/^=/, '');
-      var targetCell = sheet.getRange(f + 2, 11);
-      targetCell.setNumberFormat('@STRING@'); // Force text BEFORE writing
-      targetCell.setValue(realPhone);          // Write plain string (no leading ')
-      phoneCellsFixed++;
+  var phoneDisplayVals = phoneColRange.getDisplayValues();
+  var phoneFormulas    = phoneColRange.getFormulas();
+  var phoneCellsFixed  = 0;
+
+  for (var f = 0; f < phoneDisplayVals.length; f++) {
+    var dispVal = String(phoneDisplayVals[f][0] || '').trim();
+    // ONLY heal if the cell is showing a Sheets error (starts with '#')
+    if (dispVal.charAt(0) === '#') {
+      var fml = String(phoneFormulas[f][0] || '').trim();
+      if (fml.length > 0) {
+        // The formula IS the original phone number the user typed.
+        // e.g. user typed '+91 7284088737' → Sheets stored it as formula '+91 7284088737'
+        // Recover by stripping any leading '=' if present
+        var recoveredPhone = fml.replace(/^=\+?/, '+').replace(/^=/, '');
+        // Only recover values that look like phone numbers (+ or digit start)
+        if (recoveredPhone.charAt(0) === '+' || /^\d/.test(recoveredPhone)) {
+          var targetCell = sheet.getRange(f + 2, 11);
+          targetCell.setNumberFormat('@STRING@'); // text format FIRST
+          targetCell.setValue(recoveredPhone);    // then write value
+          phoneCellsFixed++;
+          Logger.log('getAllExpos: Healed phone in row ' + (f + 2) + ': ' + recoveredPhone);
+        }
+      }
     }
   }
+
   if (phoneCellsFixed > 0) {
-    Logger.log('getAllExpos: Auto-repaired ' + phoneCellsFixed + ' broken phone cell(s).');
-    SpreadsheetApp.flush(); // Commit repairs before reading
+    SpreadsheetApp.flush(); // commit repairs before reading data below
   }
 
-  // Use getDisplayValues() so error cells return their DISPLAY TEXT (e.g. "#ERROR!")
-  // as a plain string, which we can then filter — unlike getValues() which returns
-  // JavaScript Error objects that don't stringify to "#ERROR!".
+  // Use getDisplayValues() so any remaining error cells return "#ERROR!" as a
+  // plain string (getValues() returns JS Error objects which don't stringify correctly)
   var data = sheet.getDataRange().getDisplayValues();
   if (data.length <= 1) return [];
 
@@ -809,14 +819,10 @@ function getAllExpos() {
         personName:      String(row[7] || ''),
         personPosition:  String(row[8] || ''),
         emails:          emailsRaw ? emailsRaw.split(', ').filter(Boolean) : [],
-        // Robust filter: strip any value that is empty OR starts with '#' (any Sheet error)
-        // OR is literally the word 'Error' (JavaScript error object stringified).
+        // Only filter actual Sheets errors (starts with '#') or empty — NOT '+91' numbers
         phoneNumbers:    phonesRaw ? phonesRaw.split(', ').filter(function(p) {
                            var t = p.trim();
-                           if (!t || t.length === 0) return false;
-                           if (t.charAt(0) === '#') return false; // #ERROR!, #NAME?, #REF!, etc.
-                           if (t.toLowerCase() === 'error') return false;
-                           return true;
+                           return t.length > 0 && t.charAt(0) !== '#';
                          }) : [],
         companyWebsite:  String(row[11] || ''),
         address:         String(row[12] || ''),
@@ -830,6 +836,7 @@ function getAllExpos() {
 
   return expoOrder.map(function(id) { return expoMap[id]; });
 }
+
 
 function upsertExpo(expo) {
   var sheet = getExposSheet();
@@ -857,10 +864,15 @@ function upsertExpo(expo) {
   } else {
     for (var c = 0; c < contacts.length; c++) {
       var contact = contacts[c];
-      // ── CRITICAL FIX: phone numbers starting with '+' are treated as formulas
-      // by Google Sheets. We write them as plain text by setting the cell
-      // number format to '@' (Text) immediately after appendRow.
       var phonesStr = (contact.phoneNumbers || []).join(', ');
+
+      // ── CRITICAL: Pre-format the phone cell (col K = 11) on the NEXT row as
+      // Text BEFORE calling appendRow. If we set format AFTER appendRow, Sheets
+      // has already interpreted '+91...' as a formula and stored #ERROR! —
+      // changing format after the fact does NOT clear the formula error.
+      var nextRow = sheet.getLastRow() + 1;
+      sheet.getRange(nextRow, 11).setNumberFormat('@STRING@');
+
       sheet.appendRow([
         expoId, expo.name || '', expo.venue || '', expo.expoDate || '', expo.place || '', expo.country || '',
         contact.companyName || '', contact.personName || '', contact.personPosition || '',
@@ -868,10 +880,6 @@ function upsertExpo(expo) {
         contact.companyWebsite || '', contact.address || '', contact.city || '',
         contact.venueAddress || '', contact.companyDetails || ''
       ]);
-      // Force phone column (column 11, index 10, col K) to Text format so
-      // values like '+91 9876543210' are stored as plain strings, not formulas.
-      var lastRow = sheet.getLastRow();
-      sheet.getRange(lastRow, 11).setNumberFormat('@STRING@');
     }
   }
   return true;

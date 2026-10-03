@@ -732,6 +732,11 @@ function getExposSheet() {
     }
   }
 
+  // ── Always ensure Phone Numbers column (col 11 = K) is plain Text format.
+  // This prevents values like '+91 9876543210' being treated as formulas
+  // by Google Sheets (which would produce #ERROR!).
+  sheet.getRange(2, 11, Math.max(sheet.getMaxRows() - 1, 1000), 1).setNumberFormat('@STRING@');
+
   return sheet;
 }
 
@@ -773,7 +778,10 @@ function getAllExpos() {
         personName:      String(row[7] || ''),
         personPosition:  String(row[8] || ''),
         emails:          emailsRaw ? emailsRaw.split(', ').filter(Boolean) : [],
-        phoneNumbers:    phonesRaw ? phonesRaw.split(', ').filter(Boolean) : [],
+        phoneNumbers:    phonesRaw ? phonesRaw.split(', ').filter(function(p) {
+                           var t = p.trim();
+                           return t.length > 0 && t !== '#ERROR!' && t !== '#NAME?';
+                         }) : [],
         companyWebsite:  String(row[11] || ''),
         address:         String(row[12] || ''),
         city:            String(row[13] || ''),
@@ -813,13 +821,21 @@ function upsertExpo(expo) {
   } else {
     for (var c = 0; c < contacts.length; c++) {
       var contact = contacts[c];
+      // ── CRITICAL FIX: phone numbers starting with '+' are treated as formulas
+      // by Google Sheets. We write them as plain text by setting the cell
+      // number format to '@' (Text) immediately after appendRow.
+      var phonesStr = (contact.phoneNumbers || []).join(', ');
       sheet.appendRow([
         expoId, expo.name || '', expo.venue || '', expo.expoDate || '', expo.place || '', expo.country || '',
         contact.companyName || '', contact.personName || '', contact.personPosition || '',
-        (contact.emails || []).join(', '), (contact.phoneNumbers || []).join(', '),
+        (contact.emails || []).join(', '), phonesStr,
         contact.companyWebsite || '', contact.address || '', contact.city || '',
         contact.venueAddress || '', contact.companyDetails || ''
       ]);
+      // Force phone column (column 11, index 10, col K) to Text format so
+      // values like '+91 9876543210' are stored as plain strings, not formulas.
+      var lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow, 11).setNumberFormat('@STRING@');
     }
   }
   return true;

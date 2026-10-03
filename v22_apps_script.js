@@ -744,7 +744,38 @@ function getAllExpos() {
   var sheet = getExposSheet();
   if (!sheet) return [];
 
-  var data = sheet.getDataRange().getValues();
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return [];
+
+  // ── AUTO-HEAL: Repair any existing #ERROR! cells in Phone column (col 11 = K)
+  // Root cause: '+91 xxxx' was typed/saved and Sheets treated '+' as a formula
+  // operator. getFormulas() reveals the stored formula text; if it starts with
+  // '+' we know the cell is broken. We rewrite it as plain text with a leading
+  // apostrophe which forces Sheets to treat it as a string permanently.
+  var phoneColRange = sheet.getRange(2, 11, lastRow - 1, 1);
+  var phoneFormulas  = phoneColRange.getFormulas();
+  var phoneCellsFixed = 0;
+  for (var f = 0; f < phoneFormulas.length; f++) {
+    var fml = String(phoneFormulas[f][0] || '').trim();
+    // GAS stores '+91...' formula WITHOUT the leading '=', so it looks like '+91 ...'
+    if (fml.length > 0 && (fml.charAt(0) === '+' || fml.indexOf('=+') === 0)) {
+      // Reconstruct the real phone number from the formula text
+      var realPhone = fml.replace(/^=\+?/, '+').replace(/^=/, '');
+      var targetCell = sheet.getRange(f + 2, 11);
+      targetCell.setNumberFormat('@STRING@'); // Force text BEFORE writing
+      targetCell.setValue(realPhone);          // Write plain string (no leading ')
+      phoneCellsFixed++;
+    }
+  }
+  if (phoneCellsFixed > 0) {
+    Logger.log('getAllExpos: Auto-repaired ' + phoneCellsFixed + ' broken phone cell(s).');
+    SpreadsheetApp.flush(); // Commit repairs before reading
+  }
+
+  // Use getDisplayValues() so error cells return their DISPLAY TEXT (e.g. "#ERROR!")
+  // as a plain string, which we can then filter — unlike getValues() which returns
+  // JavaScript Error objects that don't stringify to "#ERROR!".
+  var data = sheet.getDataRange().getDisplayValues();
   if (data.length <= 1) return [];
 
   var expoMap = {};
@@ -778,9 +809,14 @@ function getAllExpos() {
         personName:      String(row[7] || ''),
         personPosition:  String(row[8] || ''),
         emails:          emailsRaw ? emailsRaw.split(', ').filter(Boolean) : [],
+        // Robust filter: strip any value that is empty OR starts with '#' (any Sheet error)
+        // OR is literally the word 'Error' (JavaScript error object stringified).
         phoneNumbers:    phonesRaw ? phonesRaw.split(', ').filter(function(p) {
                            var t = p.trim();
-                           return t.length > 0 && t !== '#ERROR!' && t !== '#NAME?';
+                           if (!t || t.length === 0) return false;
+                           if (t.charAt(0) === '#') return false; // #ERROR!, #NAME?, #REF!, etc.
+                           if (t.toLowerCase() === 'error') return false;
+                           return true;
                          }) : [],
         companyWebsite:  String(row[11] || ''),
         address:         String(row[12] || ''),

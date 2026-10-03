@@ -904,8 +904,18 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                       Wrap(
                         spacing: 8,
                         runSpacing: 6,
-                        children: contact.phoneNumbers.map((ph) {
+                        children: contact.phoneNumbers
+                            .where((ph) {
+                              // Safety net: never display Sheets formula errors
+                              final t = ph.trim();
+                              if (t.isEmpty) return false;
+                              if (t.startsWith('#')) return false;
+                              if (t.toLowerCase() == 'error') return false;
+                              return true;
+                            })
+                            .map((ph) {
                           return Container(
+
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF1F5F9),

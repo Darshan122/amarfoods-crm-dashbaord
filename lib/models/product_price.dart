@@ -168,4 +168,21 @@ class PriceHistoryItem {
       recordedAt: json['recordedAt']?.toString().trim() ?? '',
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'historyId': historyId,
+      'weekLabel': weekLabel,
+      'productId': productId,
+      'category': category,
+      'name': name,
+      'grade': grade,
+      'packing': packing,
+      'currency': currency,
+      'price': price,
+      'changeAmount': changeAmount,
+      'changePercent': changePercent,
+      'recordedAt': recordedAt,
+    };
+  }
 }

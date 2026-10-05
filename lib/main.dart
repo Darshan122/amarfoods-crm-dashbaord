@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'providers/buyer_provider.dart';
 import 'views/dashboard_view.dart';
 
@@ -16,9 +18,16 @@ class AppScrollBehavior extends MaterialScrollBehavior {
       };
 }
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = true;
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase initialization warning: $e');
+  }
   runApp(const BuyerCRMApp());
 }
 

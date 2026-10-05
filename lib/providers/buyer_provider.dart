@@ -7,11 +7,13 @@ import '../models/buyer.dart';
 import '../models/expo.dart';
 import '../models/product_price.dart';
 import '../services/api_service.dart';
+import '../services/firestore_service.dart';
 
 enum MainTab { dailyWorkArea, allImporters, analytics, emailTemplates, exposVisited, priceList, fobCifCalculator }
 
 class BuyerProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
+  final FirestoreService _firestoreService = FirestoreService();
 
   List<Buyer> _buyers = [];
   bool _isLoading = false;
@@ -143,15 +145,32 @@ class BuyerProvider extends ChangeNotifier {
 
   Future<void> loadExpos({bool forceRefresh = false}) async {
     try {
-      final remoteExpos = await _apiService.fetchExpos();
-      if (remoteExpos.isNotEmpty) {
-        _expos = remoteExpos;
+      // 1. Try loading from Firestore first
+      List<ExpoItem> firestoreExpos = [];
+      try {
+        firestoreExpos = await _firestoreService.fetchExpos();
+      } catch (e) {
+        debugPrint('BuyerProvider: Firestore fetchExpos note: $e');
+      }
+
+      if (firestoreExpos.isNotEmpty && !forceRefresh) {
+        _expos = firestoreExpos;
       } else {
-        final prefs = await SharedPreferences.getInstance();
-        final String? jsonStr = prefs.getString(_localExposKey);
-        if (jsonStr != null && jsonStr.isNotEmpty) {
-          final List<dynamic> decoded = jsonDecode(jsonStr);
-          _expos = decoded.map((e) => ExpoItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+        final remoteExpos = await _apiService.fetchExpos();
+        if (remoteExpos.isNotEmpty) {
+          _expos = remoteExpos;
+        } else {
+          final prefs = await SharedPreferences.getInstance();
+          final String? jsonStr = prefs.getString(_localExposKey);
+          if (jsonStr != null && jsonStr.isNotEmpty) {
+            final List<dynamic> decoded = jsonDecode(jsonStr);
+            _expos = decoded.map((e) => ExpoItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+          }
+        }
+
+        // Auto-migrate to Firestore if empty
+        if (firestoreExpos.isEmpty && _expos.isNotEmpty) {
+          _firestoreService.batchSaveExpos(_expos);
         }
       }
 
@@ -173,6 +192,7 @@ class BuyerProvider extends ChangeNotifier {
   Future<void> addExpo(ExpoItem expo) async {
     _expos.insert(0, expo);
     await _saveLocalExpos();
+    _firestoreService.saveExpo(expo);
     _apiService.saveExpoOnSheet(expo);
     notifyListeners();
   }
@@ -185,6 +205,7 @@ class BuyerProvider extends ChangeNotifier {
         _selectedExpo = updatedExpo;
       }
       await _saveLocalExpos();
+      _firestoreService.saveExpo(updatedExpo);
       _apiService.saveExpoOnSheet(updatedExpo);
       notifyListeners();
     }
@@ -196,6 +217,7 @@ class BuyerProvider extends ChangeNotifier {
       _selectedExpo = null;
     }
     await _saveLocalExpos();
+    _firestoreService.deleteExpo(expoId);
     _apiService.deleteExpoFromSheet(expoId);
     notifyListeners();
   }
@@ -211,6 +233,7 @@ class BuyerProvider extends ChangeNotifier {
         _selectedExpo = updatedExpo;
       }
       await _saveLocalExpos();
+      _firestoreService.saveExpo(updatedExpo);
       _apiService.saveExpoOnSheet(updatedExpo);
       notifyListeners();
     }
@@ -230,6 +253,7 @@ class BuyerProvider extends ChangeNotifier {
           _selectedExpo = updatedExpo;
         }
         await _saveLocalExpos();
+        _firestoreService.saveExpo(updatedExpo);
         _apiService.saveExpoOnSheet(updatedExpo);
         notifyListeners();
       }
@@ -247,7 +271,7 @@ class BuyerProvider extends ChangeNotifier {
         _selectedExpo = updatedExpo;
       }
       await _saveLocalExpos();
-      _apiService.saveExpoOnSheet(updatedExpo);
+      _firestoreService.saveExpo(updatedExpo);
       notifyListeners();
     }
   }
@@ -380,89 +404,49 @@ class BuyerProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final remote = await _apiService.fetchBuyers(forceRefresh: forceRefresh);
+      // 1. Try loading from Firestore first (0.1s real-time database)
+      List<Buyer> firestoreBuyers = [];
+      try {
+        firestoreBuyers = await _firestoreService.fetchBuyers();
+      } catch (e) {
+        debugPrint('BuyerProvider: Firestore fetchBuyers note: $e');
+      }
 
-      if (remote.isNotEmpty) {
-        // ── CRITICAL FIX: Merge local-only buyers with remote ──────────────
-        // When the no-cors POST to Apps Script doesn't register, locally-added
-        // buyers exist in SharedPreferences but NOT in the Sheet. The old code
-        // wiped them on refresh. Now we detect and restore them.
-        final local = await _loadLocalBuyers();
-
-        List<Buyer> merged = List<Buyer>.from(remote);
-        final List<Buyer> localOnlyBuyers = [];
-
-        for (final localBuyer in local) {
-          bool foundInRemote = false;
-          for (final remoteBuyer in remote) {
-            // Match by srNo (most reliable primary key)
-            if (localBuyer.srNo == remoteBuyer.srNo) {
-              foundInRemote = true;
-              break;
-            }
-            // Match by company name
-            final sameCompany = localBuyer.company.trim().toLowerCase() ==
-                remoteBuyer.company.trim().toLowerCase();
-            // Match by shared email address
-            final localEmails = Buyer.extractEmails(localBuyer.email);
-            final remoteEmails = Buyer.extractEmails(remoteBuyer.email);
-            bool sharedEmail = false;
-            for (final em in localEmails) {
-              if (remoteEmails.contains(em)) {
-                sharedEmail = true;
-                break;
-              }
-            }
-            if (sameCompany || sharedEmail) {
-              foundInRemote = true;
-              break;
-            }
-          }
-          // If this local buyer was NOT found in remote and has a real company name,
-          // it was lost — add it back.
-          if (!foundInRemote && localBuyer.company.trim().isNotEmpty) {
-            localOnlyBuyers.add(localBuyer);
-          }
-        }
-
-        if (localOnlyBuyers.isNotEmpty) {
-          debugPrint('BuyerProvider: ${localOnlyBuyers.length} local-only buyers missing from Sheet — restoring and re-syncing.');
-          merged.addAll(localOnlyBuyers);
-        }
-
-        _buyers = _deduplicateBuyers(merged);
-        _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
-        for (int i = 0; i < _buyers.length; i++) {
-          final seq = i + 1;
-          if (_buyers[i].srNo != seq) {
-            _buyers[i] = _buyers[i].copyWith(
-              srNo: seq,
-              id: Buyer.formatBuyerId(seq),
-            );
-          }
-        }
-
-        // Re-sync any recovered buyers back to Google Sheet (retry the failed save)
-        for (final lostBuyer in localOnlyBuyers) {
-          final idx = _buyers.indexWhere((b) =>
-              b.company.trim().toLowerCase() == lostBuyer.company.trim().toLowerCase());
-          if (idx >= 0) {
-            _apiService.saveBuyer(_buyers[idx]);
-          }
-        }
+      if (firestoreBuyers.isNotEmpty && !forceRefresh) {
+        _buyers = firestoreBuyers;
       } else {
-        // No remote data — fall back to local cache.
-        final local = await _loadLocalBuyers();
-        _buyers = _deduplicateBuyers(local);
-        _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
-        for (int i = 0; i < _buyers.length; i++) {
-          final seq = i + 1;
-          if (_buyers[i].srNo != seq) {
-            _buyers[i] = _buyers[i].copyWith(
-              srNo: seq,
-              id: Buyer.formatBuyerId(seq),
-            );
+        // Fall back to Google Sheet / local cache
+        final remote = await _apiService.fetchBuyers(forceRefresh: forceRefresh);
+        if (remote.isNotEmpty) {
+          final local = await _loadLocalBuyers();
+          List<Buyer> merged = List<Buyer>.from(remote);
+          for (final localBuyer in local) {
+            bool foundInRemote = remote.any((r) => r.srNo == localBuyer.srNo || r.company.trim().toLowerCase() == localBuyer.company.trim().toLowerCase());
+            if (!foundInRemote && localBuyer.company.trim().isNotEmpty) {
+              merged.add(localBuyer);
+            }
           }
+          _buyers = _deduplicateBuyers(merged);
+        } else {
+          final local = await _loadLocalBuyers();
+          _buyers = _deduplicateBuyers(local);
+        }
+
+        // AUTO-MIGRATE: If Firestore is empty but we have buyers, upload them to Firestore!
+        if (firestoreBuyers.isEmpty && _buyers.isNotEmpty) {
+          debugPrint('BuyerProvider: Auto-migrating ${_buyers.length} buyers to Firestore...');
+          _firestoreService.batchSaveBuyers(_buyers);
+        }
+      }
+
+      _buyers.sort((a, b) => a.srNo.compareTo(b.srNo));
+      for (int i = 0; i < _buyers.length; i++) {
+        final seq = i + 1;
+        if (_buyers[i].srNo != seq) {
+          _buyers[i] = _buyers[i].copyWith(
+            srNo: seq,
+            id: Buyer.formatBuyerId(seq),
+          );
         }
       }
 
@@ -471,7 +455,6 @@ class BuyerProvider extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('BuyerProvider: loadBuyers error: $e');
-      // On error, at minimum load from local cache so UI data is preserved
       if (_buyers.isEmpty) {
         final local = await _loadLocalBuyers();
         if (local.isNotEmpty) {
@@ -1019,6 +1002,10 @@ class BuyerProvider extends ChangeNotifier {
     await _saveLocalBuyers();
     notifyListeners();
 
+    // 1. Direct real-time save to Firebase Firestore
+    _firestoreService.saveBuyer(targetBuyer);
+
+    // 2. Background fallback to Google Sheet
     bool res = await _apiService.saveBuyer(targetBuyer);
     return res;
   }
@@ -1047,7 +1034,10 @@ class BuyerProvider extends ChangeNotifier {
     await _saveLocalBuyers();
     notifyListeners();
 
-    // Send srNo to Apps Script so it can find the exact row in Column A, delete it, and renumber.
+    // 1. Delete from Firestore
+    _firestoreService.deleteBuyer(id);
+
+    // 2. Background fallback to Google Sheet
     bool res = await _apiService.deleteBuyerBySrNo(srNoToDelete);
     _apiService.renumberBuyersOnSheet();
     return res;
@@ -1259,6 +1249,7 @@ class BuyerProvider extends ChangeNotifier {
     await _saveLocalPrices();
     notifyListeners();
 
+    _firestoreService.savePrice(price);
     final ok = await _apiService.saveProductPrice(price, weekLabel: weekLabel);
     await loadPriceHistory();
     return ok;
@@ -1270,6 +1261,7 @@ class BuyerProvider extends ChangeNotifier {
     await _saveLocalPrices();
     notifyListeners();
 
+    _firestoreService.deletePrice(productId);
     final ok = await _apiService.deleteProductPrice(productId);
     await loadPriceHistory();
     return ok;

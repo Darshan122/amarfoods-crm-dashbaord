@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/buyer.dart';
@@ -57,6 +58,31 @@ class _DashboardViewState extends State<DashboardView> {
       widget.provider.loadMoreCategory('all_followup_queue');
       widget.provider.loadMoreCategory('filtered');
     }
+  }
+
+  void _exportAllBuyersToCsv(BuildContext context, BuyerProvider p) {
+    if (p.buyers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No buyers to export yet.'),
+          backgroundColor: Color(0xFFE11D48),
+        ),
+      );
+      return;
+    }
+    final sb = StringBuffer();
+    sb.writeln('"Sr. No.","Importer Company","Website","Email","Phone","Connection Method","Connection Date","First Email Date","Follow Up Date","Client Reply","Last Email Date","Follow-Up Count","Current Status","Next Action","Notes","Market Type"');
+    for (final b in p.buyers) {
+      sb.writeln('"${b.srNo}","${b.company.replaceAll('"', '""')}","${b.website.replaceAll('"', '""')}","${b.email.replaceAll('"', '""')}","${b.phone.replaceAll('"', '""')}","${b.connectionMethod.replaceAll('"', '""')}","${b.connectionDate}","${b.firstEmailDate}","${b.nextDueDate}","${b.clientReply}","${b.lastEmailDate}","${b.followupCount}","${b.status}","${b.nextAction}","${b.notes.replaceAll('"', '""')}","${b.marketType}"');
+    }
+    final dataUri = Uri.dataFromString(sb.toString(), mimeType: 'text/csv', encoding: utf8);
+    UrlUtils.launchURL(dataUri.toString());
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ Exported all ${p.buyers.length} Buyers to Excel / CSV!'),
+        backgroundColor: const Color(0xFF009647),
+      ),
+    );
   }
 
   @override
@@ -220,7 +246,7 @@ class _DashboardViewState extends State<DashboardView> {
                                   ),
                                   const SizedBox(width: 5),
                                   Text(
-                                    p.isLoading ? 'Syncing...' : '2-Way Sheet Sync Active',
+                                    p.isLoading ? 'Syncing...' : '🔥 Firebase Realtime Active',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 10,
@@ -355,6 +381,45 @@ class _DashboardViewState extends State<DashboardView> {
                         border: Border.all(color: Colors.white24),
                       ),
                       child: const Icon(Icons.settings_outlined, color: Colors.white, size: 17),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                // One-Click Excel / CSV Export Button
+                Tooltip(
+                  message: 'Download Full Excel / CSV Backup of All Buyers',
+                  child: InkWell(
+                    onTap: () => _exportAllBuyersToCsv(context, p),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isNarrow ? 8 : 10,
+                        vertical: isNarrow ? 6 : 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.download_rounded, color: Colors.white, size: 16),
+                          if (!isNarrow) ...[
+                            const SizedBox(width: 5),
+                            const Text(
+                              'Export Excel',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

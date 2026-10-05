@@ -1133,77 +1133,40 @@ class BuyerProvider extends ChangeNotifier {
     _isLoadingPrices = true;
     notifyListeners();
     try {
-      final remotePrices = await _apiService.fetchPrices();
+      List<ProductPrice> firestorePrices = [];
+      try {
+        firestorePrices = await _firestoreService.fetchPrices();
+      } catch (e) {
+        debugPrint('BuyerProvider: Firestore fetchPrices error: $e');
+      }
 
-      if (remotePrices.isNotEmpty) {
-        // ── CRITICAL FIX: Merge remote with local ─────────────────────────────
-        // Remote has the Sheet's saved prices. But local may have newer edits
-        // that the no-cors POST never delivered. Prefer local price for any
-        // product that exists in both (local = user's latest edit).
-        final localPrefs = await SharedPreferences.getInstance();
-        final String? localJson = localPrefs.getString(_localPricesKey);
-        List<ProductPrice> localPrices = [];
-        if (localJson != null && localJson.isNotEmpty) {
-          try {
-            final List<dynamic> decoded = jsonDecode(localJson);
-            localPrices = decoded.map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map))).toList();
-          } catch (_) {}
-        }
-
-        // Build merged list: start with remote, override with local where product IDs match
-        final Map<String, ProductPrice> merged = {};
-        for (final rp in remotePrices) {
-          merged[rp.id] = rp.currency.isEmpty || rp.currency.contains('USD')
+      if (firestorePrices.isNotEmpty && !forceRefresh) {
+        _prices = firestorePrices;
+      } else {
+        final remotePrices = await _apiService.fetchPrices();
+        if (remotePrices.isNotEmpty) {
+          _prices = remotePrices.map((rp) => rp.currency.isEmpty || rp.currency.contains('USD')
               ? rp.copyWith(currency: '₹ / kg')
-              : rp;
-        }
-        // Local overrides remote for same product (user's edit takes priority)
-        for (final lp in localPrices) {
-          if (merged.containsKey(lp.id)) {
-            // Only override if local price differs from remote (user actually changed it)
-            final rp = merged[lp.id]!;
-            if (lp.currentPrice != rp.currentPrice || lp.grade != rp.grade || lp.packing != rp.packing) {
-              merged[lp.id] = lp;
-              // Re-sync this local change back to the Sheet
-              _apiService.saveProductPrice(lp);
-              debugPrint('BuyerProvider: Re-syncing locally-edited price for ${lp.name} to Sheet.');
-            }
+              : rp).toList();
+        } else {
+          final prefs = await SharedPreferences.getInstance();
+          final String? jsonStr = prefs.getString(_localPricesKey);
+          if (jsonStr != null && jsonStr.isNotEmpty) {
+            final List<dynamic> decoded = jsonDecode(jsonStr);
+            _prices = decoded.map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+          } else {
+            _prices = ApiService.getDefaultPrices();
           }
         }
-        _prices = merged.values.toList();
-      } else {
-        // Remote returned empty — use local cache (never fall back to hardcoded defaults
-        // unless local is also empty for the first time).
-        final prefs = await SharedPreferences.getInstance();
-        final String? jsonStr = prefs.getString(_localPricesKey);
-        if (jsonStr != null && jsonStr.isNotEmpty) {
-          final List<dynamic> decoded = jsonDecode(jsonStr);
-          _prices = decoded.map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map))).toList();
-          debugPrint('BuyerProvider: Remote prices empty — loaded ${_prices.length} prices from local cache.');
-        } else {
-          // Absolute first run — load defaults and push to Sheet
-          _prices = ApiService.getDefaultPrices();
-          _apiService.saveWeeklyPrices(_prices, weekLabel: 'Daily Spot Rate');
+
+        // Auto-migrate to Firestore
+        if (firestorePrices.isEmpty && _prices.isNotEmpty) {
+          _firestoreService.batchSavePrices(_prices);
         }
       }
       await _saveLocalPrices();
     } catch (e) {
       debugPrint('BuyerProvider: Error loading prices: $e');
-      // On error always preserve existing in-memory prices or load from local cache
-      if (_prices.isEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        final String? jsonStr = prefs.getString(_localPricesKey);
-        if (jsonStr != null && jsonStr.isNotEmpty) {
-          try {
-            final List<dynamic> decoded = jsonDecode(jsonStr);
-            _prices = decoded.map((e) => ProductPrice.fromJson(Map<String, dynamic>.from(e as Map))).toList();
-          } catch (_) {
-            _prices = ApiService.getDefaultPrices();
-          }
-        } else {
-          _prices = ApiService.getDefaultPrices();
-        }
-      }
     } finally {
       _isLoadingPrices = false;
       notifyListeners();
@@ -1216,6 +1179,7 @@ class BuyerProvider extends ChangeNotifier {
     try {
       _prices = ApiService.getDefaultPrices();
       await _saveLocalPrices();
+      _firestoreService.batchSavePrices(_prices);
       await _apiService.saveWeeklyPrices(_prices, weekLabel: 'Daily Spot Rate');
       await loadPriceHistory();
     } catch (e) {
@@ -1228,11 +1192,23 @@ class BuyerProvider extends ChangeNotifier {
 
   Future<void> loadPriceHistory() async {
     try {
-      final history = await _apiService.fetchPriceHistory();
-      if (history.isNotEmpty) {
-        _priceHistory = history;
-        notifyListeners();
+      List<PriceHistoryItem> firestoreHistory = [];
+      try {
+        firestoreHistory = await _firestoreService.fetchPriceHistory();
+      } catch (e) {
+        debugPrint('BuyerProvider: Firestore fetchPriceHistory error: $e');
       }
+
+      if (firestoreHistory.isNotEmpty) {
+        _priceHistory = firestoreHistory;
+      } else {
+        final history = await _apiService.fetchPriceHistory();
+        if (history.isNotEmpty) {
+          _priceHistory = history;
+          _firestoreService.batchSavePriceHistory(history);
+        }
+      }
+      notifyListeners();
     } catch (e) {
       debugPrint('BuyerProvider: Error loading price history: $e');
     }

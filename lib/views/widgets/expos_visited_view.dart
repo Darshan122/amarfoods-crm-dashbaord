@@ -914,8 +914,8 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                               return true;
                             })
                             .map((ph) {
+                          final displayPh = ph.replaceFirst(RegExp(r"^'+"), '').trim();
                           return Container(
-
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF1F5F9),
@@ -926,7 +926,7 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  ph,
+                                  displayPh,
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -938,7 +938,7 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                                 Tooltip(
                                   message: 'Copy Phone Number',
                                   child: InkWell(
-                                    onTap: () => _copyToClipboard(context, ph, 'phone number'),
+                                    onTap: () => _copyToClipboard(context, displayPh, 'phone number'),
                                     child: const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF0284C7)),
                                   ),
                                 ),
@@ -947,7 +947,7 @@ class _ExposVisitedViewState extends State<ExposVisitedView> {
                                 Tooltip(
                                   message: 'Check & Chat on WhatsApp',
                                   child: InkWell(
-                                    onTap: () => _openWhatsApp(ph),
+                                    onTap: () => _openWhatsApp(displayPh),
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(

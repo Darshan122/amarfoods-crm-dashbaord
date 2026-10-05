@@ -38,8 +38,8 @@ class ExpoContact {
       // phone that starts with '+'. The space prevents formula interpretation.
       // On read-back (fromJson below), we trim() to restore the original number.
       'phoneNumbers': phoneNumbers.map((ph) {
-        final p = ph.trim();
-        return p.startsWith('+') ? ' $p' : p;
+        final p = ph.trim().replaceFirst(RegExp(r"^'+"), '').trim();
+        return p.startsWith('+') ? "'$p" : p;
       }).toList(),
       'companyWebsite': companyWebsite,
       'personName': personName,
@@ -59,13 +59,12 @@ class ExpoContact {
       emails: json['emails'] != null
           ? List<String>.from(json['emails'].map((x) => x.toString()))
           : [],
-      // Trim on read so the leading space (added during save) is stripped,
-      // and also filter out any #ERROR! values from existing broken cells.
+      // Strip leading apostrophe, trim, and filter out any error values
       phoneNumbers: json['phoneNumbers'] != null
           ? List<String>.from(
               json['phoneNumbers']
-                .map((x) => x.toString().trim())
-                .where((x) => x.isNotEmpty && !x.startsWith('#'))
+                .map((x) => x.toString().trim().replaceFirst(RegExp(r"^'+"), '').trim())
+                .where((x) => x.isNotEmpty && !x.startsWith('#') && x.toLowerCase() != 'error')
             )
           : [],
       companyWebsite: json['companyWebsite']?.toString() ?? '',

@@ -33,7 +33,14 @@ class ExpoContact {
       'companyName': companyName,
       'companyDetails': companyDetails,
       'emails': emails,
-      'phoneNumbers': phoneNumbers,
+      // CRITICAL FIX: Google Sheets treats any cell value starting with '+' as a
+      // formula operator, causing #ERROR!. We prepend a single space before any
+      // phone that starts with '+'. The space prevents formula interpretation.
+      // On read-back (fromJson below), we trim() to restore the original number.
+      'phoneNumbers': phoneNumbers.map((ph) {
+        final p = ph.trim();
+        return p.startsWith('+') ? ' $p' : p;
+      }).toList(),
       'companyWebsite': companyWebsite,
       'personName': personName,
       'personPosition': personPosition,
@@ -52,8 +59,14 @@ class ExpoContact {
       emails: json['emails'] != null
           ? List<String>.from(json['emails'].map((x) => x.toString()))
           : [],
+      // Trim on read so the leading space (added during save) is stripped,
+      // and also filter out any #ERROR! values from existing broken cells.
       phoneNumbers: json['phoneNumbers'] != null
-          ? List<String>.from(json['phoneNumbers'].map((x) => x.toString()))
+          ? List<String>.from(
+              json['phoneNumbers']
+                .map((x) => x.toString().trim())
+                .where((x) => x.isNotEmpty && !x.startsWith('#'))
+            )
           : [],
       companyWebsite: json['companyWebsite']?.toString() ?? '',
       personName: json['personName']?.toString() ?? '',
@@ -65,6 +78,7 @@ class ExpoContact {
     );
   }
 }
+
 
 class ExpoItem {
   final String id;

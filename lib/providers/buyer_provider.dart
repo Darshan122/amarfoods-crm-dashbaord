@@ -9,7 +9,7 @@ import '../models/product_price.dart';
 import '../services/api_service.dart';
 import '../services/firestore_service.dart';
 
-enum MainTab { dailyWorkArea, allImporters, analytics, emailTemplates, exposVisited, priceList, fobCifCalculator }
+enum MainTab { dailyWorkArea, allImporters, analytics, emailTemplates, exposVisited, priceList }
 
 class BuyerProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();

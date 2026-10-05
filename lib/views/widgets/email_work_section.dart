@@ -265,7 +265,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
                     content: Text(
                       'This will mark all ${targetBuyers.length} buyers as "First Email Sent", '
                       'record today\'s date as First Email Date, schedule their next follow-up in +7 days, '
-                      'and sync the updates to your Google Sheet.\n\n'
+                      'and save the updates to your Cloud database.\n\n'
                       'Proceed?',
                       style: const TextStyle(fontSize: 13, color: Color(0xFF334155)),
                     ),
@@ -518,7 +518,7 @@ class _EmailWorkSectionState extends State<EmailWorkSection> {
             const Icon(Icons.bolt, color: Colors.amber, size: 14),
             const SizedBox(width: 4),
             const Text(
-              'Actions auto-log dates & sync to Google Sheet',
+              'Actions auto-log dates & save to Cloud database',
               style: TextStyle(
                   color: Color(0xFF64748B),
                   fontSize: 11,

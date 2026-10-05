@@ -1,17 +1,14 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/buyer.dart';
 import '../providers/buyer_provider.dart';
 import '../services/url_utils.dart';
 import 'buyer_dialog.dart';
-import 'config_dialog.dart';
 import 'widgets/daily_work_area_view.dart';
 import 'widgets/email_work_section.dart';
 import 'widgets/email_templates_view.dart';
 import 'widgets/expos_visited_view.dart';
 import 'widgets/price_list_view.dart';
-import 'widgets/fob_cif_calculator_view.dart';
 
 enum DisplayLayout { table, kanban }
 
@@ -60,31 +57,6 @@ class _DashboardViewState extends State<DashboardView> {
     }
   }
 
-  void _exportAllBuyersToCsv(BuildContext context, BuyerProvider p) {
-    if (p.buyers.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No buyers to export yet.'),
-          backgroundColor: Color(0xFFE11D48),
-        ),
-      );
-      return;
-    }
-    final sb = StringBuffer();
-    sb.writeln('"Sr. No.","Importer Company","Website","Email","Phone","Connection Method","Connection Date","First Email Date","Follow Up Date","Client Reply","Last Email Date","Follow-Up Count","Current Status","Next Action","Notes","Market Type"');
-    for (final b in p.buyers) {
-      sb.writeln('"${b.srNo}","${b.company.replaceAll('"', '""')}","${b.website.replaceAll('"', '""')}","${b.email.replaceAll('"', '""')}","${b.phone.replaceAll('"', '""')}","${b.connectionMethod.replaceAll('"', '""')}","${b.connectionDate}","${b.firstEmailDate}","${b.nextDueDate}","${b.clientReply}","${b.lastEmailDate}","${b.followupCount}","${b.status}","${b.nextAction}","${b.notes.replaceAll('"', '""')}","${b.marketType}"');
-    }
-    final dataUri = Uri.dataFromString(sb.toString(), mimeType: 'text/csv', encoding: utf8);
-    UrlUtils.launchURL(dataUri.toString());
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('✅ Exported all ${p.buyers.length} Buyers to Excel / CSV!'),
-        backgroundColor: const Color(0xFF009647),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final p = widget.provider;
@@ -120,9 +92,7 @@ class _DashboardViewState extends State<DashboardView> {
                                     ? ExposVisitedView(provider: p)
                                     : p.activeTab == MainTab.priceList
                                         ? PriceListView(provider: p)
-                                        : p.activeTab == MainTab.fobCifCalculator
-                                            ? FobCifCalculatorView(provider: p)
-                                            : _buildAllImportersView(p),
+                                        : _buildAllImportersView(p),
               ),
             ),
           ],
@@ -203,54 +173,61 @@ class _DashboardViewState extends State<DashboardView> {
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
-                              fontSize: isNarrow ? 15 : 17,
+                              fontSize: isNarrow ? 15 : 18,
                               letterSpacing: 0.5,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                             decoration: BoxDecoration(
                               color: const Color(0xFF009647),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
-                              'BUYER CRM',
+                              'CRM PORTAL',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 9.5,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w800,
                                 letterSpacing: 0.5,
                               ),
                             ),
                           ),
                           if (!isNarrow) ...[
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 12),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                               decoration: BoxDecoration(
                                 color: Colors.black.withValues(alpha: 0.25),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(20),
                                 border: Border.all(color: Colors.white24, width: 0.8),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Container(
-                                    width: 6,
-                                    height: 6,
+                                    width: 7,
+                                    height: 7,
                                     decoration: BoxDecoration(
                                       color: p.isLoading ? const Color(0xFFFDE047) : const Color(0xFF4ADE80),
                                       shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: (p.isLoading ? const Color(0xFFFDE047) : const Color(0xFF4ADE80)).withValues(alpha: 0.6),
+                                          blurRadius: 4,
+                                          spreadRadius: 1,
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(width: 5),
+                                  const SizedBox(width: 6),
                                   Text(
-                                    p.isLoading ? 'Syncing...' : '🔥 Firebase Realtime Active',
+                                    p.isLoading ? 'Syncing...' : '🟢 Cloud Connected',
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w500,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -265,7 +242,7 @@ class _DashboardViewState extends State<DashboardView> {
                           'Dehydrated Onion, Garlic & Agro Products Importer Management System',
                           style: TextStyle(
                             color: Colors.white70,
-                            fontSize: 10.5,
+                            fontSize: 11,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -274,146 +251,74 @@ class _DashboardViewState extends State<DashboardView> {
                   ),
                 ),
 
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
 
-                // Action Buttons: Sync / Refresh Button
+                // Refresh Button
                 Tooltip(
-                  message: 'Push ALL local data to Sheet, then refresh',
+                  message: 'Refresh data from Cloud',
                   child: InkWell(
-                    onTap: p.isLoading || p.isForceSyncing
+                    onTap: p.isLoading
                         ? null
                         : () async {
-                            // Step 1: Push all local buyers to Sheet first
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
+                              const SnackBar(
                                 content: Row(
                                   children: [
-                                    const SizedBox(
-                                      width: 14, height: 14,
+                                    SizedBox(
+                                      width: 14,
+                                      height: 14,
                                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                     ),
-                                    const SizedBox(width: 10),
-                                    Text('Pushing ${p.buyers.length} buyers to Sheet...'),
+                                    SizedBox(width: 10),
+                                    Text('Refreshing data from Cloud...'),
                                   ],
                                 ),
-                                duration: const Duration(seconds: 4),
-                                backgroundColor: const Color(0xFF8B2C69),
+                                duration: Duration(seconds: 2),
+                                backgroundColor: Color(0xFF701A52),
                               ),
                             );
-                            await p.forcePushAllToSheet();
-                            // Step 2: Refresh from Sheet
-                            await Future.delayed(const Duration(seconds: 2));
-                            p.loadBuyers();
+                            await p.loadBuyers(forceRefresh: true);
                             p.loadExpos();
-                            p.loadPrices();
+                            p.loadPrices(forceRefresh: true);
                             p.loadPriceHistory();
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('✅ All data synced to Google Sheet successfully!'),
-                                  duration: Duration(seconds: 3),
+                                  content: Text('✅ Data refreshed successfully!'),
+                                  duration: Duration(seconds: 2),
                                   backgroundColor: Color(0xFF009647),
                                 ),
                               );
                             }
                           },
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     child: Container(
                       padding: EdgeInsets.symmetric(
-                        horizontal: isNarrow ? 8 : 12,
-                        vertical: isNarrow ? 6 : 8,
+                        horizontal: isNarrow ? 10 : 14,
+                        vertical: isNarrow ? 7 : 9,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white24),
+                        color: Colors.white.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white30, width: 1),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          p.isLoading || p.isForceSyncing
+                          p.isLoading
                               ? const SizedBox(
                                   width: 14,
                                   height: 14,
                                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                 )
-                              : const Icon(Icons.sync_rounded, color: Colors.white, size: 16),
+                              : const Icon(Icons.refresh_rounded, color: Colors.white, size: 16),
                           if (!isNarrow) ...[
                             const SizedBox(width: 6),
-                            Text(
-                              p.isForceSyncing
-                                  ? 'Syncing ${p.forceSyncProgress}/${p.forceSyncTotal}...'
-                                  : 'Sync Sheet',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 8),
-
-                // Settings Button (Apps Script Config)
-                Tooltip(
-                  message: 'Google Sheet & Apps Script Configuration',
-                  child: InkWell(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) => ConfigDialog(
-                          currentUrl: p.scriptUrl,
-                          onSaveUrl: (url) => p.setScriptUrl(url),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: const Icon(Icons.settings_outlined, color: Colors.white, size: 17),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 8),
-
-                // One-Click Excel / CSV Export Button
-                Tooltip(
-                  message: 'Download Full Excel / CSV Backup of All Buyers',
-                  child: InkWell(
-                    onTap: () => _exportAllBuyersToCsv(context, p),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isNarrow ? 8 : 10,
-                        vertical: isNarrow ? 6 : 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.download_rounded, color: Colors.white, size: 16),
-                          if (!isNarrow) ...[
-                            const SizedBox(width: 5),
                             const Text(
-                              'Export Excel',
+                              'Refresh',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 12,
+                                fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -424,35 +329,63 @@ class _DashboardViewState extends State<DashboardView> {
                   ),
                 ),
 
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
 
-                // Emerald Green + Add Buyer Button
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF009647),
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isNarrow ? 10 : 16,
-                      vertical: isNarrow ? 8 : 10,
+                // Prominent + Add Buyer Button
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF009647), Color(0xFF007A39)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    elevation: 2,
-                  ),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => BuyerDialog(
-                        nextSrNo: p.maxSrNo + 1,
-                        existingBuyers: p.buyers,
-                        defaultMarket: p.marketFilter != 'All' ? p.marketFilter : 'International',
-                        onSave: (newBuyer) => p.saveBuyer(newBuyer),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF009647).withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
-                  label: Text(
-                    isNarrow ? 'Add' : 'Add Buyer',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => BuyerDialog(
+                            nextSrNo: p.maxSrNo + 1,
+                            existingBuyers: p.buyers,
+                            defaultMarket: p.marketFilter != 'All' ? p.marketFilter : 'International',
+                            onSave: (newBuyer) => p.saveBuyer(newBuyer),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isNarrow ? 12 : 18,
+                          vertical: isNarrow ? 8 : 10,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 17),
+                            const SizedBox(width: 6),
+                            Text(
+                              isNarrow ? 'Add' : 'Add Buyer',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -463,7 +396,7 @@ class _DashboardViewState extends State<DashboardView> {
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: const Color(0xFF5A1440).withValues(alpha: 0.95),
+              color: const Color(0xFF4C1035).withValues(alpha: 0.98),
               border: const Border(
                 top: BorderSide(color: Colors.white12, width: 1),
               ),
@@ -516,13 +449,6 @@ class _DashboardViewState extends State<DashboardView> {
                     badge: '24 Items',
                     isActive: p.activeTab == MainTab.priceList,
                     onTap: () => p.setActiveTab(MainTab.priceList),
-                  ),
-                  _buildNavTab(
-                    label: 'FOB & CIF Calculator',
-                    icon: Icons.calculate_rounded,
-                    badge: 'Pipavav',
-                    isActive: p.activeTab == MainTab.fobCifCalculator,
-                    onTap: () => p.setActiveTab(MainTab.fobCifCalculator),
                   ),
                 ],
               ),
@@ -742,7 +668,7 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
-  /// Full buyer table — all records from Google Sheet
+  /// Full buyer table — all client records from Cloud database
   Widget _buildAllImportersTable(BuyerProvider p) {
     final buyers = p.paginatedFilteredBuyers;
     final isMobile = MediaQuery.of(context).size.width < 768;
@@ -1795,44 +1721,74 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
-  /// Search Box matching Screenshot 4
+  /// Modern Search Box with responsive clear & filter styling
   Widget _buildSearchBox(BuyerProvider p) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.search, color: Color(0xFF8B2C69), size: 18),
-              SizedBox(width: 6),
-              Text(
-                'SEARCH BUYER',
-                style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 12),
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B2C69).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(Icons.search_rounded, color: Color(0xFF8B2C69), size: 16),
               ),
+              const SizedBox(width: 8),
+              const Text(
+                'QUICK SEARCH BUYERS',
+                style: TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              if (p.searchQuery.isNotEmpty)
+                Text(
+                  '${p.filteredBuyers.length} matching',
+                  style: const TextStyle(
+                    color: Color(0xFF8B2C69),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           SizedBox(
-            height: 38,
+            height: 42,
             child: TextField(
               controller: _searchController,
               onChanged: p.setSearchQuery,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
+              style: const TextStyle(fontSize: 13.5, color: Color(0xFF0F172A), fontWeight: FontWeight.w500),
               decoration: InputDecoration(
-                hintText: 'Search by Company, Website URL, Email, Phone, or Notes...',
-                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                hintText: 'Search by Company, Website URL, Email, Phone, Country, or Notes...',
+                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12.5),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
                 filled: true,
                 fillColor: const Color(0xFFF8FAFC),
+                prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF94A3B8)),
                 suffixIcon: p.searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.close, size: 16, color: Color(0xFF64748B)),
+                        icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF64748B)),
                         onPressed: () {
                           _searchController.clear();
                           p.setSearchQuery('');
@@ -1840,16 +1796,16 @@ class _DashboardViewState extends State<DashboardView> {
                       )
                     : null,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF8B2C69)),
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFF8B2C69), width: 1.5),
                 ),
               ),
             ),
@@ -1859,62 +1815,129 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
-  /// 6 Executive Metric Cards matching Screenshot 4 & 5
+  /// 6 Responsive Executive Metric Cards
   Widget _buildSixExecutiveMetricCards(BuyerProvider p) {
     int total = p.totalBuyersCount;
     int firstEmails = p.firstEmailCount;
     int followups = p.todayFollowupCount;
-    int overdue = 0;
+    int overdue = p.overdueBuyers.length;
     int converted = p.convertedCount;
 
-    return Row(
-      children: [
-        _buildMetricCardTile('TOTAL BUYERS', total.toString(), 'Total Records', Icons.people_outline, const Color(0xFF475569)),
-        const SizedBox(width: 10),
-        _buildMetricCardTile('NEW & OUTREACH', '${firstEmails + 67}', 'New: $firstEmails | Sent: 67', Icons.email_outlined, const Color(0xFF8B2C69)),
-        const SizedBox(width: 10),
-        _buildMetricCardTile('FOLLOW UP CYCLE', '90', 'Due: 0 | Sent: 90', Icons.autorenew, const Color(0xFF009647)),
-        const SizedBox(width: 10),
-        _buildMetricCardTile('FOLLOW UPS DUE TODAY', followups.toString(), 'Scheduled Today', Icons.access_time_rounded, const Color(0xFFD97706)),
-        const SizedBox(width: 10),
-        _buildMetricCardTile('OVERDUE FOLLOW UPS', overdue.toString(), 'Past Scheduled Date', Icons.error_outline_rounded, Colors.redAccent),
-        const SizedBox(width: 10),
-        _buildMetricCardTile('REPLIED / INTERESTED', converted.toString(), 'Responses Received', Icons.chat_bubble_outline_rounded, const Color(0xFF2563EB)),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 1050;
+        final isMedium = constraints.maxWidth >= 650 && constraints.maxWidth < 1050;
+
+        final cardList = [
+          _buildMetricCardTile('TOTAL BUYERS', total.toString(), 'All client records', Icons.people_alt_rounded, const Color(0xFF475569)),
+          _buildMetricCardTile('NEW LEADS', '$firstEmails', 'First email pending', Icons.mail_outline_rounded, const Color(0xFF8B2C69)),
+          _buildMetricCardTile('IN CONVERSATION', '${p.buyers.where((b) => b.followupCount > 0).length}', 'Active follow-ups', Icons.autorenew_rounded, const Color(0xFF009647)),
+          _buildMetricCardTile('DUE TODAY', followups.toString(), 'Scheduled for today', Icons.access_time_rounded, const Color(0xFFD97706)),
+          _buildMetricCardTile('OVERDUE', overdue.toString(), 'Requires attention', Icons.warning_amber_rounded, const Color(0xFFE11D48)),
+          _buildMetricCardTile('REPLIED / WON', converted.toString(), 'Interested clients', Icons.thumb_up_alt_rounded, const Color(0xFF2563EB)),
+        ];
+
+        if (isWide) {
+          return Row(
+            children: [
+              for (int i = 0; i < cardList.length; i++) ...[
+                if (i > 0) const SizedBox(width: 10),
+                Expanded(child: cardList[i]),
+              ],
+            ],
+          );
+        } else if (isMedium) {
+          return Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(child: cardList[0]),
+                  const SizedBox(width: 10),
+                  Expanded(child: cardList[1]),
+                  const SizedBox(width: 10),
+                  Expanded(child: cardList[2]),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(child: cardList[3]),
+                  const SizedBox(width: 10),
+                  Expanded(child: cardList[4]),
+                  const SizedBox(width: 10),
+                  Expanded(child: cardList[5]),
+                ],
+              ),
+            ],
+          );
+        } else {
+          return Column(
+            children: [
+              for (int i = 0; i < cardList.length; i += 2) ...[
+                if (i > 0) const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: cardList[i]),
+                    const SizedBox(width: 10),
+                    if (i + 1 < cardList.length) Expanded(child: cardList[i + 1]),
+                  ],
+                ),
+              ],
+            ],
+          );
+        }
+      },
     );
   }
 
   Widget _buildMetricCardTile(String title, String val, String subtitle, IconData icon, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(child: Text(title, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold))),
-                Icon(icon, color: color, size: 16),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(val, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 2),
-            Text(subtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 10)),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 16),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(val, style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 2),
+          Text(subtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 10.5, fontWeight: FontWeight.w500)),
+        ],
       ),
     );
   }
@@ -1923,7 +1946,7 @@ class _DashboardViewState extends State<DashboardView> {
   Widget _buildAnalyticsView(BuyerProvider p) {
     return CustomScrollView(
       slivers: [
-        // ── SECTION 1: TODAY'S EMAIL WORK section (reused shared widget, Google Sheet data) ──
+        // ── SECTION 1: TODAY'S EMAIL WORK section (reused shared widget, Cloud data) ──
         SliverToBoxAdapter(
           child: SizedBox(
             height: 910,

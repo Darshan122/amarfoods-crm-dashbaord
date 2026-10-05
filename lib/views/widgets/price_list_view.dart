@@ -140,7 +140,7 @@ class _PriceListViewState extends State<PriceListView> {
                           ),
                           const SizedBox(height: 6),
                           const Text(
-                            'Weekly Ex-Factory (Mahuva) price tracking in Indian Rupees (₹ / kg) with automatic Google Sheets history sync and 1-click PDF quotations.',
+                            'Weekly Ex-Factory (Mahuva) price tracking in Indian Rupees (₹ / kg) with real-time Cloud history sync and 1-click PDF quotations.',
                             style: TextStyle(color: Color(0xFFCCFBF1), fontSize: 13),
                           ),
                         ],
@@ -175,20 +175,6 @@ class _PriceListViewState extends State<PriceListView> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFDE047), // Vibrant Gold
                         foregroundColor: const Color(0xFF0F172A),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        elevation: 0,
-                      ),
-                    ),
-                    // FOB & CIF Calculator Button
-                    ElevatedButton.icon(
-                      onPressed: () => p.setActiveTab(MainTab.fobCifCalculator),
-                      icon: const Icon(Icons.calculate_rounded, size: 16),
-                      label: const Text('FOB & CIF Calculator', style: TextStyle(fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0F766E),
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0xFF5EEAD4), width: 1.2),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
@@ -250,7 +236,7 @@ class _PriceListViewState extends State<PriceListView> {
                               ],
                             ),
                             content: const Text(
-                              'This will load all 24 official products with Sorted (Export Quality) & Unsorted (Commercial) Flakes across White Onion, Red Onion, Pink Onion, and Garlic in Indian Rupees (₹ / kg) and sync them to your Google Sheet.\n\nDo you want to proceed?',
+                              'This will load all 24 official products with Sorted (Export Quality) & Unsorted (Commercial) Flakes across White Onion, Red Onion, Pink Onion, and Garlic in Indian Rupees (₹ / kg) and sync them to your Cloud database.\n\nDo you want to proceed?',
                             ),
                             actions: [
                               TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
@@ -284,7 +270,7 @@ class _PriceListViewState extends State<PriceListView> {
                     ),
                     // Refresh Button
                     IconButton(
-                      tooltip: 'Refresh from Google Sheets',
+                      tooltip: 'Refresh Prices',
                       icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 22),
                       style: IconButton.styleFrom(
                         backgroundColor: Colors.white.withValues(alpha: 0.1),
@@ -1226,7 +1212,7 @@ class _PriceListViewState extends State<PriceListView> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(success
-                                      ? '✅ Weekly prices updated and archived to Google Sheets!'
+                                      ? '✅ Weekly prices updated and saved to Cloud!'
                                       : '⚠️ Updated locally. Saved to offline cache.'),
                                   backgroundColor: const Color(0xFF0F766E),
                                 ),
@@ -1317,7 +1303,7 @@ class _PriceListViewState extends State<PriceListView> {
               Navigator.of(ctx).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('✅ Price for ${item.name} saved and synced to Google Sheet!'),
+                  content: Text('✅ Price for ${item.name} saved and synced to Cloud!'),
                   backgroundColor: const Color(0xFF15803D),
                 ),
               );
@@ -1438,7 +1424,7 @@ class _PriceListViewState extends State<PriceListView> {
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('✅ Added "$name" and synced to Google Sheet!'),
+                    content: Text('✅ Added "$name" and saved to Cloud!'),
                     backgroundColor: const Color(0xFF15803D),
                   ),
                 );
@@ -1465,7 +1451,7 @@ class _PriceListViewState extends State<PriceListView> {
           ],
         ),
         content: Text(
-          'Are you sure you want to remove "${item.name}" from the active price catalog and Google Sheets?\n\nThis will remove it from future quotations.',
+          'Are you sure you want to remove "${item.name}" from the active price catalog?\n\nThis will remove it from future quotations.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
@@ -1476,7 +1462,7 @@ class _PriceListViewState extends State<PriceListView> {
               Navigator.of(ctx).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('🗑️ Removed "${item.name}" from Google Sheet.'),
+                  content: Text('🗑️ Removed "${item.name}".'),
                   backgroundColor: const Color(0xFFB91C1C),
                 ),
               );
